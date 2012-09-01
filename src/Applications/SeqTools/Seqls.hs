@@ -2,9 +2,11 @@
 module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Format
+import System.FileSequence.Status
 import System.Environment
 import System.Console.GetOpt
 import System.Directory
+
 --import Data.List
 
 -- seqls command.
@@ -17,97 +19,93 @@ import System.Directory
 -- TODO read directories AND list of files or sequences
 -- TODO verbose
 -- TODO : show permissions with question mark
-data OutputFormat = Nuke | Rv | Printf
-    deriving Show
 
-detectOutputFormat :: String -> OutputFormat
-detectOutputFormat "rv"     = Rv
-detectOutputFormat "printf" = Printf
-detectOutputFormat _        = Nuke
+
 
 -- |Store command line Options
-data Options = Options
-    { outputFormat  :: OutputFormat
-    , fullPath      :: Bool
-    , directoryList :: [String]
+data SeqLsData = SeqLsData
+    { outputFormat    :: FormatingOptions
+    , pathList        :: [String]
     } deriving Show
 
 -- |Default command line options
-defaultOptions :: Options
-defaultOptions = Options
-    { outputFormat = Nuke
-    , fullPath = True
-    , directoryList = ["."]
+defaultOptions :: SeqLsData
+defaultOptions = SeqLsData
+    { outputFormat = defaultFormatingOptions
+    , pathList = ["."]
     }
 
+-- |Utility function to change the output format using the function
+-- |provided in the first argument
+updateFormat :: (FormatingOptions -> FormatingOptions)
+             -> SeqLsData
+             -> SeqLsData
+updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
+
 -- |List of options modifiers
-options :: [OptDescr (Options -> Options)]
+options :: [OptDescr (SeqLsData -> SeqLsData)]
 options =
     [
       Option "f" ["format"]
-        (ReqArg (\f opts -> opts {outputFormat=detectOutputFormat f} ) "[nuke|rv|printf]")
-         "Format of the output"
+        (ReqArg  (updateFormat.setFormatFromString)  "[nuke|rv|printf]")
+         "Formating style of the output"
     , Option "g" ["fullpath"]
-        (NoArg (\ opt -> opt {fullPath=False}))
+        (NoArg (updateFormat (setFullPath True)) )
         "Display sequence with full path"
+    --, Option "l" ["long"]
+    --    (NoArg (\ opt -> opt {stat=True}))
+    --    "Long listing format, provide detailed informations on the sequence"
     ]
 
--- |Select the formating function
-formatOutput :: OutputFormat -> Bool -> FileSequence -> String
-formatOutput Rv = formatAsRvSequence
-formatOutput _  = formatAsNukeSequence
 
--- |Separate directories from other files
-partitionFiles :: [FilePath] -> IO ([FilePath], [FilePath])
-partitionFiles []     = return ([],[])
-partitionFiles (x:xs) = do
+-- |Split directories from files
+splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
+splitPaths []     = return ([],[])
+splitPaths (x:xs) = do
   de <- doesDirectoryExist x
   fe <- doesFileExist x
-  (yd, yf) <- partitionFiles xs
+  (yd, yf) <- splitPaths xs
   return (conc de x yd, conc fe x yf)
   where conc True x' xs' = x':xs'
         conc False _ xs' = xs'
 
 -- |Process the options modifiers
-processOptions :: [Options -> Options] -> [String] -> Options
+processOptions :: [SeqLsData -> SeqLsData] -> [String] -> SeqLsData
 processOptions optFunc remArgs = addDirectoryList processedOptions remArgs
   where processedOptions = foldl (flip id) defaultOptions optFunc
         addDirectoryList opt_ n_ =
           case n_ of
-            [] -> opt_ -- by default directoryList = "."
-            _  -> opt_ { directoryList = n_ }
+            [] -> opt_ -- by default pathList = "."
+            _  -> opt_ { pathList = n_ }
 
--- |
-showFoundSequences :: [Options -> Options] -> [String] -> IO ()
-showFoundSequences o n = do
-  -- debug print opts
+-- |Finally force the printing of the sequences
+showFoundSequences :: SeqLsData -> IO ()
+showFoundSequences opts = do
   -- partition directories and files
-  (directories, files) <- partitionFiles (directoryList opts)
+  (directories, files) <- splitPaths (pathList opts)
   -- find sequences in directories
-  sequencesInDirs <- fileSequencesFromPaths directories
+  sequencesInDirs  <- fileSequencesFromPaths directories
+  -- same for the files
+  sequencesOfFiles <- fileSequencesFromFiles files
   -- show formatted result
-  mapM_ (putStrLn.formatFunc) $ fileSequencesFromList files ++ sequencesInDirs
-  where formatFunc = formatOutput (outputFormat opts) (fullPath opts)
-        opts = processOptions o n
-
-
--- | Called when an option in the command line is not recognized
+  let allSequences = sequencesOfFiles ++ sequencesInDirs
+  mapM_ (putStrLn.formatSeqFunc) $ allSequences
+  -- debug display status
+  status <- mapM fileSequenceStatus allSequences
+  mapM_ (putStrLn.formatStaFunc) status
+  where formatSeqFunc = formatSequenceFunction (outputFormat opts)
+        formatStaFunc = formatStatusFunction (outputFormat opts)
+-- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
 showErrorMessage = do
-  putStrLn $ "unrecognize options"
-  putStrLn $ usageInfo "seqls - list file sequences" options
+  putStrLn $ usageInfo "seqls - list sequences of files" options
 
 main :: IO ()
 main = do
   args <- getArgs
-  let opts = getOpt Permute options args
-  case opts of
-    (o, n, [])  -> showFoundSequences o n
+  let cmdlopts = getOpt Permute options args
+  case cmdlopts of
+    (o, n, [])  -> showFoundSequences (processOptions o n)
     _           -> showErrorMessage
-
-
-
-
-
 
 
