@@ -21,26 +21,18 @@ import System.Directory
 -- TODO : show permissions with question mark
 
 
-
--- |Store command line Options
+-- |Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
     { outputFormat    :: FormatingOptions
     , pathList        :: [String]
     } deriving Show
 
--- |Default command line options
+-- |Default seqls datas
 defaultOptions :: SeqLsData
 defaultOptions = SeqLsData
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
     }
-
--- |Utility function to change the output format using the function
--- |provided in the first argument
-updateFormat :: (FormatingOptions -> FormatingOptions)
-             -> SeqLsData
-             -> SeqLsData
-updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
 -- |List of options modifiers
 options :: [OptDescr (SeqLsData -> SeqLsData)]
@@ -56,7 +48,7 @@ options =
     --    (NoArg (\ opt -> opt {stat=True}))
     --    "Long listing format, provide detailed informations on the sequence"
     ]
-
+    where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
 -- |Split directories from files
 splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
@@ -95,6 +87,7 @@ showFoundSequences opts = do
   mapM_ (putStrLn.formatStaFunc) status
   where formatSeqFunc = formatSequenceFunction (outputFormat opts)
         formatStaFunc = formatStatusFunction (outputFormat opts)
+
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
 showErrorMessage = do
