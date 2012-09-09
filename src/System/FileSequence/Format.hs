@@ -3,13 +3,16 @@ module System.FileSequence.Format (
       FormatingOptions
     , formatSequenceFunction
     , formatStatusFunction
+    , formatResult
     , defaultFormatingOptions
     , setFullPath
     , setFormatFromString
+    , setLongOption
 ) where
 
 import System.FileSequence
 import System.FileSequence.Status
+import Data.List 
 
 -- HERE : formating arguments/options
 -- remove formatAs functions,
@@ -37,12 +40,31 @@ defaultFormatingOptions = FormatingOptions
 setFullPath :: Bool -> FormatingOptions -> FormatingOptions
 setFullPath fp opts = opts {fullPath=fp}
 
+setLongOption :: Bool -> FormatingOptions -> FormatingOptions
+setLongOption fp opts = opts {showStats=fp}
+
 -- |
 setFormatFromString :: String -> FormatingOptions -> FormatingOptions
 setFormatFromString s fo = fo {sequenceFormat = (formatFromString s)}
   where formatFromString "rv"     = Rv
         formatFromString "printf" = Printf
         formatFromString _        = Nuke
+
+-- |Standard formating for command line
+formatResult :: FormatingOptions 
+             -> (FileSequence, FileSequenceStatus) 
+             -> String
+formatResult opts = 
+    (\fs -> concat (map ($ fs) layoutFuncs))
+        where layoutFuncs = intersperse spacefunc showFuncs 
+              -- build a list of functions to display 
+              showFuncs =   (consIf (showStats opts==True) ((formatSizesFunction opts).snd))
+                          $ (consIf (showStats opts==True) ((formatPermFunction opts).snd))    
+                          $ (consIf True ((formatSequenceFunction opts).fst))
+                          $ []
+                        
+              spacefunc = (\_ -> "  ") -- Space function 
+              consIf x y = if x then (y:) else id
 
 -- |Returns the formating function associated to the formating options
 formatSequenceFunction :: FormatingOptions -> (FileSequence -> String)

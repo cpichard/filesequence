@@ -19,12 +19,13 @@ import System.Directory
 -- TODO read directories AND list of files or sequences
 -- TODO verbose
 -- TODO : show permissions with question mark
-
+-- TODO : format as lseq
 
 -- |Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
     { outputFormat    :: FormatingOptions
     , pathList        :: [String]
+    , stat            :: Bool 
     } deriving Show
 
 -- |Default seqls datas
@@ -32,6 +33,7 @@ defaultOptions :: SeqLsData
 defaultOptions = SeqLsData
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
+    , stat=True
     }
 
 -- |List of options modifiers
@@ -44,9 +46,9 @@ options =
     , Option "g" ["fullpath"]
         (NoArg (updateFormat (setFullPath True)) )
         "Display sequence with full path"
-    --, Option "l" ["long"]
-    --    (NoArg (\ opt -> opt {stat=True}))
-    --    "Long listing format, provide detailed informations on the sequence"
+    , Option "l" ["long"]
+       (NoArg (updateFormat (setLongOption True)))
+       "Long listing format, provide detailed informations on the sequence"
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
@@ -81,12 +83,9 @@ showFoundSequences opts = do
   sequencesOfFiles <- fileSequencesFromFiles files
   -- show formatted result
   let allSequences = sequencesOfFiles ++ sequencesInDirs
-  mapM_ (putStrLn.formatSeqFunc) $ allSequences
-  -- debug display status
   status <- mapM fileSequenceStatus allSequences
-  mapM_ (putStrLn.formatStaFunc) status
-  where formatSeqFunc = formatSequenceFunction (outputFormat opts)
-        formatStaFunc = formatStatusFunction (outputFormat opts)
+  mapM_ (putStrLn.format) (zip allSequences status)
+  where format = formatResult (outputFormat opts)
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
