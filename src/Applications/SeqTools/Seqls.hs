@@ -12,8 +12,7 @@ import System.Directory
 -- seqls command.
 -- Search and display all the sequences in the given path
 -- TODO : add search stereo option
--- TODO add recursive search options
--- TODO add status options
+-- TODO add full status options
 -- TODO add all files as opposed to only sequences
 -- TODO add ordering options by size, etc
 -- TODO verbose
@@ -53,7 +52,7 @@ options =
        "Long listing format, provide detailed informations on the sequence"
     , Option "r" ["recursive"]
        (NoArg (\opt -> opt {recursive=True}))
-       "Long listing format, provide detailed informations on the sequence"
+       "Recursive search of file sequences"
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
