@@ -2,7 +2,6 @@ module System.FileSequence.Format (
     -- * Formating datas
       FormatingOptions
     , formatSequenceFunction
-    , formatStatusFunction
     , formatResult
     , defaultFormatingOptions
     , setFullPath
@@ -57,7 +56,7 @@ formatResult :: FormatingOptions
 formatResult opts = 
     (\fs -> concat (map ($ fs) layoutFuncs))
         where layoutFuncs = intersperse spacefunc showFuncs 
-              -- build a list of functions to display 
+              -- build a list of "show" functions depending on a condition 
               showFuncs =   (consIf (showStats opts==True) ((formatSizesFunction opts).snd))
                           $ (consIf (showStats opts==True) ((formatPermFunction opts).snd))    
                           $ (consIf True ((formatSequenceFunction opts).fst))
@@ -111,13 +110,13 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatView form
              | fullpath_ = path
              | otherwise = const ""
 
-formatStatusFunction :: FormatingOptions -> (FileSequenceStatus -> String)
-formatStatusFunction opt = 
-    (\fss -> concat (map ($(fss)) showFuncs))
-    where showFuncs = [ formatPermFunction opt
-                      , (\_ -> "  ") -- Space function 
-                      , formatSizesFunction opt
-                      ]
+--formatStatusFunction :: FormatingOptions -> (FileSequenceStatus -> String)
+--formatStatusFunction opt = 
+--    (\fss -> concat (map ($(fss)) showFuncs))
+--    where showFuncs = [ formatPermFunction opt
+--                      , (\_ -> "  ") -- Space function 
+--                      , formatSizesFunction opt
+--                      ]
 
 formatSizesFunction :: FormatingOptions -> (FileSequenceStatus -> String)
 formatSizesFunction _ = 
@@ -143,7 +142,8 @@ formatPermFunction _ =
                       , showPerm otherExecPerm  "x"
                       ]
                      
-                     
+--TODO formatUserFunction :: FormatingOptions -> (FileSequenceStatus -> String)
+--TODO formatUserFunction _ = (\fss -> "todo")                    
                       
 
 

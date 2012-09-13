@@ -16,16 +16,17 @@ import System.Directory
 -- TODO add status options
 -- TODO add all files as opposed to only sequences
 -- TODO add ordering options by size, etc
--- TODO read directories AND list of files or sequences
 -- TODO verbose
--- TODO : show permissions with question mark
 -- TODO : format as lseq
+
+
 
 -- |Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
     { outputFormat    :: FormatingOptions
     , pathList        :: [String]
-    , stat            :: Bool 
+    , stat            :: Bool
+    , recursive       :: Bool
     } deriving Show
 
 -- |Default seqls datas
@@ -34,6 +35,7 @@ defaultOptions = SeqLsData
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
     , stat=True
+    , recursive=False
     }
 
 -- |List of options modifiers
@@ -48,6 +50,9 @@ options =
         "Display sequence with full path"
     , Option "l" ["long"]
        (NoArg (updateFormat (setLongOption True)))
+       "Long listing format, provide detailed informations on the sequence"
+    , Option "r" ["recursive"]
+       (NoArg (\opt -> opt {recursive=True}))
        "Long listing format, provide detailed informations on the sequence"
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
@@ -76,9 +81,13 @@ processOptions optFunc remArgs = addDirectoryList processedOptions remArgs
 showFoundSequences :: SeqLsData -> IO ()
 showFoundSequences opts = do
   -- partition directories and files
-  (directories, files) <- splitPaths (pathList opts)
+  (directories, files) <- splitPaths (pathList opts) 
+  alldirs <- do 
+      if recursive opts 
+        then mapM getRecursiveDirs directories >>= (return . concat)
+        else return directories
   -- find sequences in directories
-  sequencesInDirs  <- fileSequencesFromPaths directories
+  sequencesInDirs  <- fileSequencesFromPaths alldirs
   -- same for the files
   sequencesOfFiles <- fileSequencesFromFiles files
   -- show formatted result

@@ -23,6 +23,8 @@ module System.FileSequence (
     frameName,
     frameRange,
     frameList,
+    -- * Utils
+    getRecursiveDirs
 ) where
 
 import System.Directory
@@ -193,3 +195,19 @@ frameList fs_ = map (frameName fs_) (frameRange fs_)
 padNumber :: Maybe Int -> String
 padNumber (Just pad_) = "%0" ++ show pad_ ++ "d"
 padNumber Nothing = "%d"
+
+
+-- |Real world haskell
+getRecursiveDirs :: FilePath -> IO [FilePath]
+getRecursiveDirs topdir = do
+  names <- getDirectoryContents topdir
+  let properNames = filter (`notElem` [".", ".."]) names
+  paths <- forM properNames $ \name -> do
+    let path = topdir </> name
+    isDirectory <- doesDirectoryExist path
+    if isDirectory
+      then getRecursiveDirs path
+      else return []
+  return $ topdir:(concat paths)
+
+
