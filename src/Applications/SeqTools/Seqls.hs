@@ -19,7 +19,6 @@ import System.Directory
 -- TODO : format as lseq
 
 
-
 -- |Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
     { outputFormat    :: FormatingOptions
@@ -50,7 +49,7 @@ options =
     , Option "l" ["long"]
        (NoArg (updateFormat (setLongOption True)))
        "Long listing format, provide detailed informations on the sequence"
-    , Option "r" ["recursive"]
+    , Option "R" ["recursive"]
        (NoArg (\opt -> opt {recursive=True}))
        "Recursive search of file sequences"
     ]
