@@ -144,9 +144,6 @@ fileSequencesFromFiles files = do
   return $ fileSequencesFromList existingFiles
 
 -- |Returns the file sequences of a list of names
--- |NOTE : findseq is here the least efficient part of the code
--- |       It generates a lot of thunks and when the number of files is high
--- |       half of the time is spent in the garbage collector
 fileSequencesFromList :: [String] -> [FileSequence]
 fileSequencesFromList nameList =
     mergeSeq $ groupBy sameSequence potentialSeqs
