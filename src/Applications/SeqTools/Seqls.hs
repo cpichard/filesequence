@@ -6,6 +6,7 @@ import System.FileSequence.Status
 import System.Environment
 import System.Console.GetOpt
 import System.Directory
+import Control.Monad (liftM)
 
 --import Data.List
 
@@ -68,7 +69,7 @@ splitPaths (x:xs) = do
 
 -- |Process the options modifiers
 processOptions :: [SeqLsData -> SeqLsData] -> [String] -> SeqLsData
-processOptions optFunc remArgs = addDirectoryList processedOptions remArgs
+processOptions optFunc = addDirectoryList processedOptions
   where processedOptions = foldl (flip id) defaultOptions optFunc
         addDirectoryList opt_ n_ =
           case n_ of
@@ -79,10 +80,10 @@ processOptions optFunc remArgs = addDirectoryList processedOptions remArgs
 showFoundSequences :: SeqLsData -> IO ()
 showFoundSequences opts = do
   -- partition directories and files
-  (directories, files) <- splitPaths (pathList opts) 
-  alldirs <- do 
-      if recursive opts 
-        then mapM getRecursiveDirs directories >>= (return . concat)
+  (directories, files) <- splitPaths (pathList opts)
+  alldirs <-
+      if recursive opts
+        then liftM concat (mapM getRecursiveDirs directories)
         else return directories
   -- find sequences in directories
   sequencesInDirs  <- fileSequencesFromPaths alldirs
@@ -96,7 +97,7 @@ showFoundSequences opts = do
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
-showErrorMessage = do
+showErrorMessage =
   putStrLn $ usageInfo "seqls - list sequences of files" options
 
 main :: IO ()

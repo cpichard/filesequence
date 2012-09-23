@@ -11,7 +11,7 @@ module System.FileSequence.Format (
 
 import System.FileSequence
 import System.FileSequence.Status
-import Data.List 
+import Data.List
 
 -- HERE : formating arguments/options
 -- remove formatAs functions,
@@ -44,29 +44,28 @@ setLongOption fp opts = opts {showStats=fp}
 
 -- |
 setFormatFromString :: String -> FormatingOptions -> FormatingOptions
-setFormatFromString s fo = fo {sequenceFormat = (formatFromString s)}
+setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
   where formatFromString "rv"     = Rv
         formatFromString "printf" = Printf
         formatFromString _        = Nuke
 
 -- |Standard formating for command line
-formatResult :: FormatingOptions 
-             -> (FileSequence, FileSequenceStatus) 
+formatResult :: FormatingOptions
+             -> (FileSequence, FileSequenceStatus)
              -> String
-formatResult opts = 
-    (\fs -> concat (map ($ fs) layoutFuncs))
-        where layoutFuncs = intersperse spacefunc showFuncs 
-              -- build a list of "show" functions depending on a condition 
-              showFuncs =   (consIf (showStats opts==True) ((formatSizesFunction opts).snd))
-                          $ (consIf (showStats opts==True) ((formatPermFunction opts).snd))    
-                          $ (consIf True ((formatSequenceFunction opts).fst))
-                          $ []
-                        
-              spacefunc = (\_ -> "  ") -- Space function 
+formatResult opts =
+    \fs -> concatMap ($ fs) layoutFuncs
+        where layoutFuncs = intersperse spacefunc showFuncs
+              -- build a list of "show" functions depending on a condition
+              showFuncs =   consIf (showStats opts) (formatPermFunction opts . snd)
+                          $ consIf (showStats opts) (formatSizesFunction opts . snd)
+                          $ consIf True (formatSequenceFunction opts . fst) []
+
+              spacefunc _ = "  " -- Space function
               consIf x y = if x then (y:) else id
 
 -- |Returns the formating function associated to the formating options
-formatSequenceFunction :: FormatingOptions -> (FileSequence -> String)
+formatSequenceFunction :: FormatingOptions -> FileSequence -> String
 formatSequenceFunction opts =
    case sequenceFormat opts of
      Rv -> formatAsRvSequence  (fullPath opts)
@@ -111,26 +110,26 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatView form
              | otherwise = const ""
 
 --formatStatusFunction :: FormatingOptions -> (FileSequenceStatus -> String)
---formatStatusFunction opt = 
+--formatStatusFunction opt =
 --    (\fss -> concat (map ($(fss)) showFuncs))
 --    where showFuncs = [ formatPermFunction opt
---                      , (\_ -> "  ") -- Space function 
+--                      , (\_ -> "  ") -- Space function
 --                      , formatSizesFunction opt
 --                      ]
 
-formatSizesFunction :: FormatingOptions -> (FileSequenceStatus -> String)
-formatSizesFunction _ = 
-    (\fss -> (show $ maxSize fss) ++ "  " ++ (show $ minSize fss))
+formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> String
+formatSizesFunction _ fss =
+    show (maxSize fss) ++ "  " ++ show (minSize fss)
 
-formatPermFunction :: FormatingOptions -> (FileSequenceStatus -> String)
+formatPermFunction :: FormatingOptions -> FileSequenceStatus -> String
 formatPermFunction _ =
-    (\fss -> concat (map ($(perms fss)) showFuncs))
+    \fss -> concatMap ($(perms fss)) showFuncs
     where showPerm _  _ Nothing       = "?"
-          showPerm pf c (Just perms_) = 
+          showPerm pf c (Just perms_) =
              case pf perms_ of
                Nothing   -> "?"
                Just True -> c
-               Just False-> "-" 
+               Just False-> "-"
           showFuncs = [ showPerm ownerReadPerm  "r"
                       , showPerm ownerWritePerm "w"
                       , showPerm ownerExecPerm  "x"
@@ -141,9 +140,9 @@ formatPermFunction _ =
                       , showPerm otherWritePerm "w"
                       , showPerm otherExecPerm  "x"
                       ]
-                     
+
 --TODO formatUserFunction :: FormatingOptions -> (FileSequenceStatus -> String)
---TODO formatUserFunction _ = (\fss -> "todo")                    
-                      
+--TODO formatUserFunction _ = (\fss -> "todo")
+
 
 

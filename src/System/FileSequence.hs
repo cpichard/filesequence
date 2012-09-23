@@ -207,6 +207,6 @@ getRecursiveDirs topdir = do
     if isDirectory
       then getRecursiveDirs path
       else return []
-  return $ topdir:(concat paths)
+  return $ topdir:concat paths
 
 

@@ -34,7 +34,7 @@ permissionsFromFileStatus fs = Permissions owrp owwp owep grrp grwp grep otrp ot
 -- |Addition of two permission
 sumPermissions :: Permissions -> Maybe Permissions -> Permissions
 sumPermissions a (Just b) = Permissions owrp owwp owep grrp grwp grep otrp otwp otep
-  where hasSamePerm perm_ a_ b_ = if (perm_ a_ == perm_ b_) then (perm_ a) else Nothing
+  where hasSamePerm perm_ a_ b_ = if perm_ a_ == perm_ b_ then perm_ a else Nothing
         owrp = hasSamePerm ownerReadPerm  a b
         owwp = hasSamePerm ownerWritePerm a b
         owep = hasSamePerm ownerExecPerm  a b
@@ -67,7 +67,7 @@ foldStatus fss (x:xs) = do
     then do
       status <- getFileStatus x
       foldStatus (update_ status fss) xs
-    else do
+    else
       foldStatus (missing_ x fss) xs
   where update_ st_ fss_ = fss_
           { perms = Just $ sumPermissions (permissionsFromFileStatus st_) (perms fss_)
@@ -75,7 +75,7 @@ foldStatus fss (x:xs) = do
           , minSize = min (fileSize st_) (minSize fss_)
           }
         missing_ x_ fss_= fss_
-          { missing = x_:(missing fss_)}
+          { missing = x_:missing fss_}
 
 foldStatus fss_ [] = return fss_
 
