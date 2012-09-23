@@ -150,8 +150,7 @@ fileSequencesFromFiles files = do
 fileSequencesFromList :: [String] -> [FileSequence]
 fileSequencesFromList nameList =
     mergeSeq $ groupBy sameSequence potentialSeqs
-    where   sort_ = Data.List.sort
-            potentialSeqs = findseq (sort_ nameList) []
+    where   potentialSeqs = findseq nameList []
             findseq (x:xs) found =
                 case fileSequenceFromName x of
                     Nothing -> findseq xs found
