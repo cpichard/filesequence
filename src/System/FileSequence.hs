@@ -24,7 +24,8 @@ module System.FileSequence (
     frameRange,
     frameList,
     -- * Utils
-    getRecursiveDirs
+    getRecursiveDirs,
+    recursiveDirWalk
 ) where
 
 import System.Directory
@@ -45,15 +46,9 @@ frameSepReg = sepReg
 extSepReg :: String
 extSepReg = "(\\.)"
 
-viewsReg :: String
-viewsReg = "(right|left)"
-
-viewSepReg :: String
-viewSepReg = "(" ++ sepReg ++ viewsReg ++ ")?"
-
 -- * Regex used to find sequences
 fileInSeq :: String
-fileInSeq = "(.*?)" ++ viewSepReg ++ frameSepReg ++ "([0-9]+)"++ extSepReg ++ "(.+)"
+fileInSeq = "(.*?)" ++ frameSepReg ++ "([0-9]+)"++ extSepReg ++ "([a-zA-Z0-9]+)$"
 
 -- * Datatype
 -- |File sequence data structure.
@@ -61,15 +56,12 @@ fileInSeq = "(.*?)" ++ viewSepReg ++ frameSepReg ++ "([0-9]+)"++ extSepReg ++ "(
 data FileSequence = FileSequence {
       firstFrame        :: Int      -- ^ First frame number.
     , lastFrame         :: Int      -- ^ Last frame number.
-    , step              :: Int      -- ^ Step between frames. Not used, TODO.
-    , paddingLength     :: Maybe Int-- ^ Padding = length of the frame ex: 00012 -> 5
+    , paddingLength     :: Maybe Int-- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: FilePath -- ^ Directory of the sequence
     , name              :: FilePath -- ^ Name of the sequence,
     , ext               :: FilePath -- ^ Extension
-    , viewSep           :: String   -- ^ Char used to separate the view
     , frameSep          :: String   -- ^ Char used to separate the frame
     , extSep            :: String   -- ^ Char used to separate the extension
-    , views             :: [String] -- ^ Views of the sequence
     } deriving Show
 
 -- |Returns true if two sequences have the same signature.
@@ -80,22 +72,18 @@ sameSequence fs1 fs2 =
        name fs1 == name fs2
     && path fs1 == path fs2
     && ext  fs1 == ext  fs2
-    && step fs1 == step fs2
-    && viewSep  fs1 == viewSep fs2
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
 
 -- |Returns a copy of fs1 with an union of fs1 and fs2 frame ranges
 -- |It basically adds frame to a sequence
 addFrame :: FileSequence -> FileSequence -> FileSequence
-addFrame fs1 fs2 = fs1 { firstFrame=firstF
-                       , lastFrame=lastF
-                       , views=unionOfViews
-                       , paddingLength=deducePadding
+addFrame fs1 fs2 = fs1 { firstFrame = firstF
+                       , lastFrame = lastF
+                       , paddingLength = deducePadding
                        }
     where firstF = min (firstFrame fs1) (firstFrame fs2)
           lastF  = max (lastFrame fs1) (lastFrame fs2)
-          unionOfViews = views fs1 `union` views fs2
           deducePadding = if paddingLength fs1 == paddingLength fs2
                             then paddingLength fs1
                             else Nothing
@@ -144,40 +132,56 @@ fileSequencesFromFiles files = do
   return $ fileSequencesFromList existingFiles
 
 -- |Returns the file sequences of a list of names
+-- fileSequencesFromList :: [String] -> [FileSequence]
+-- fileSequencesFromList nameList =
+--    mergeSeq $ groupBy sameSequence (sort potentialSeqs)
+--    where   potentialSeqs = findseq nameList []
+--            findseq (x:xs) found =
+--                case fileSequenceFromName x of
+--                    Nothing -> findseq xs found
+--                    Just fs -> findseq xs (fs:found)
+--            findseq [] found = found
+--            mergeSeq = map (foldr1 addFrame)
+
+-- |Returns the file sequences of a list of names
 fileSequencesFromList :: [String] -> [FileSequence]
-fileSequencesFromList nameList =
-    mergeSeq $ groupBy sameSequence potentialSeqs
-    where   potentialSeqs = findseq nameList []
-            findseq (x:xs) found =
+fileSequencesFromList nameList = findseq nameList []
+    where   findseq (x:xs) found =
                 case fileSequenceFromName x of
                     Nothing -> findseq xs found
-                    Just fs -> findseq xs (fs:found)
+                    Just fs -> 
+                        let (a,b) = break (sameSequence fs) found in 
+                        case b of 
+                          []     -> findseq xs (fs:found)
+                          (y:ys) -> findseq xs $ (addFrame y fs):(a++ys)
             findseq [] found = found
-            mergeSeq = map (foldr1 addFrame)
 
 -- |Return a FileSequence if the name follows the convention
 fileSequenceFromName :: String -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
-        [[   _ , fullName, _, s1, view, s2, num, s3, ext_ ]]
-            -> Just $ FileSequence (toFloat num) (toFloat num) 0 (Just (length num))  path_ fullName ext_ s1 s2 s3 (storeView view)
+        [[ _ , fullName, sep1, num, sep2, ext_ ]]
+            -> Just $ FileSequence { firstFrame = (toFloat num)
+                                   , lastFrame = (toFloat num)
+                                   , paddingLength = (Just (length num))
+                                   , path = path_
+                                   , name = fullName
+                                   , ext = ext_
+                                   , frameSep = sep1
+                                   , extSep = sep2 
+                                   } 
         _   -> Nothing
 
     where (path_, filename) = splitFileName name_
           regResult = filename =~ fileInSeq :: [[String]]
           toFloat nn = read nn :: Int
-          storeView "" = []
-          storeView f  = [f]
 
 -- |Returns the filename of the frame number
--- TODO views + rename formatSequence as something like reconstruct...
 frameName :: FileSequence -> Int -> FilePath
-frameName fs_ frame_ = formatSequence fs_ path formatViews formatFrames
-    where   formatViews _  = ""
-            formatFrames fs = printf (padNumber (paddingLength fs)) frame_
-            formatSequence fs path_ view_ padding_ =
-                path_ fs ++ name fs ++ view_ fs ++ frameSep fs ++ padding_ fs ++ extSep fs ++ ext fs
-
+frameName fs_ frame_ = formatSequence fs_ path formatFrames
+    where   formatFrames fs = printf (padNumber (paddingLength fs)) frame_
+            formatSequence fs path_ padding_ =
+                path_ fs ++ name fs ++ frameSep fs ++ padding_ fs ++ extSep fs ++ ext fs
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
@@ -192,18 +196,28 @@ padNumber :: Maybe Int -> String
 padNumber (Just pad_) = "%0" ++ show pad_ ++ "d"
 padNumber Nothing = "%d"
 
-
 -- |Real world haskell
 getRecursiveDirs :: FilePath -> IO [FilePath]
 getRecursiveDirs topdir = do
   names <- getDirectoryContents topdir
   let properNames = filter (`notElem` [".", ".."]) names
-  paths <- forM properNames $ \name -> do
-    let path = topdir </> name
-    isDirectory <- doesDirectoryExist path
+  paths <- forM properNames $ \name_ -> do
+    let path_ = topdir </> name_
+    isDirectory <- doesDirectoryExist path_
     if isDirectory
-      then getRecursiveDirs path
+      then getRecursiveDirs path_
       else return []
   return $ topdir:concat paths
 
-
+recursiveDirWalk :: ( [FilePath] -> IO () ) -> FilePath -> IO ()
+recursiveDirWalk func topdir = do
+  names <- getDirectoryContents topdir
+  func names
+  let properNames = filter (`notElem` [".", ".."]) names
+  forM_ properNames $ \name_ -> do
+    let path_ = topdir </> name_
+    isDirectory <- doesDirectoryExist path_
+    if isDirectory
+      then recursiveDirWalk func path_ 
+      else return ()
+  return ()

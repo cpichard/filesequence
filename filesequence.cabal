@@ -7,13 +7,20 @@ Library
   Exposed-modules:  System.FileSequence,
                     System.FileSequence.Manip,
                     System.FileSequence.Status,
-                    System.FileSequence.Format
-  build-depends: base, regex-pcre, filepath, directory, parallel, unix
-  ghc-options:       -Wall -O2
+                    System.FileSequence.Format,
+                    System.FileSequence.Hash
+  build-depends: base, regex-pcre, filepath, directory, parallel, unix, bytestring, cryptohash
+  ghc-options:       -Wall -O2 -rtsopts 
   Hs-Source-Dirs: src/
 
 executable seqls
   build-depends: base, regex-pcre, filepath, directory, filesequence
-  ghc-options: -Wall -O2
+  ghc-options: -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqls.hs
+
+executable seqsum
+  build-depends: base, filesequence, cryptohash >= 0.9, directory
+  ghc-options: -Wall -O2 -rtsopts 
+  hs-source-dirs:  src/Applications/SeqTools/
+  main-is:  Seqsum.hs

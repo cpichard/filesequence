@@ -12,7 +12,7 @@ fileSequenceRemove fs_ =
    mapM_ removeFile (frameList fs_)
 
 -- | Copy a all files of a file sequence to a new directory
--- Returns the newly generated filesequence (TODO maybe ?)
+-- Returns the newly generated filesequence (TODO maybe ? or error)
 fileSequenceCopy :: FileSequence -> FilePath -> IO FileSequence
 fileSequenceCopy fs_ path_ = return fs_
     --if path fs_ == path_ 

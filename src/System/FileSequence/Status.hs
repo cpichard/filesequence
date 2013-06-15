@@ -5,7 +5,7 @@ import System.Posix.Files
 import System.Posix.Types
 
 -- | A file permission
-data Permissions = Permissions
+data FileSequenceMode = FileSequenceMode
   { ownerReadPerm  :: Maybe Bool
   , ownerWritePerm :: Maybe Bool
   , ownerExecPerm  :: Maybe Bool
@@ -15,49 +15,53 @@ data Permissions = Permissions
   , otherReadPerm  :: Maybe Bool
   , otherWritePerm :: Maybe Bool
   , otherExecPerm  :: Maybe Bool
+  , isSymLink      :: Maybe Bool
   } deriving (Eq, Show)
 
 -- |Returns permissions from a FileStatus info
-permissionsFromFileStatus :: FileStatus -> Permissions
-permissionsFromFileStatus fs = Permissions owrp owwp owep grrp grwp grep otrp otwp otep
-  where hasPerm x = intersectFileModes (fileMode fs) x == x
-        owrp = Just $ hasPerm ownerReadMode
-        owwp = Just $ hasPerm ownerWriteMode
-        owep = Just $ hasPerm ownerExecuteMode
-        grrp = Just $ hasPerm groupReadMode
-        grwp = Just $ hasPerm groupWriteMode
-        grep = Just $ hasPerm groupExecuteMode
-        otrp = Just $ hasPerm otherReadMode
-        otwp = Just $ hasPerm otherWriteMode
-        otep = Just $ hasPerm otherExecuteMode
+modeFromFileStatus :: FileStatus -> FileSequenceMode
+modeFromFileStatus fs = FileSequenceMode owrp owwp owep grrp grwp grep otrp otwp otep syml
+  where hasMode x = intersectFileModes (fileMode fs) x == x
+        owrp = Just $ hasMode ownerReadMode
+        owwp = Just $ hasMode ownerWriteMode
+        owep = Just $ hasMode ownerExecuteMode
+        grrp = Just $ hasMode groupReadMode
+        grwp = Just $ hasMode groupWriteMode
+        grep = Just $ hasMode groupExecuteMode
+        otrp = Just $ hasMode otherReadMode
+        otwp = Just $ hasMode otherWriteMode
+        otep = Just $ hasMode otherExecuteMode
+        syml = Just $ hasMode symbolicLinkMode 
 
 -- |Addition of two permission
-sumPermissions :: Permissions -> Maybe Permissions -> Permissions
-sumPermissions a (Just b) = Permissions owrp owwp owep grrp grwp grep otrp otwp otep
-  where hasSamePerm perm_ a_ b_ = if perm_ a_ == perm_ b_ then perm_ a else Nothing
-        owrp = hasSamePerm ownerReadPerm  a b
-        owwp = hasSamePerm ownerWritePerm a b
-        owep = hasSamePerm ownerExecPerm  a b
-        grrp = hasSamePerm groupReadPerm  a b
-        grwp = hasSamePerm groupWritePerm a b
-        grep = hasSamePerm groupExecPerm  a b
-        otrp = hasSamePerm otherReadPerm  a b
-        otwp = hasSamePerm otherWritePerm a b
-        otep = hasSamePerm otherExecPerm  a b
-sumPermissions a Nothing = a
+sumFileSequenceMode :: FileSequenceMode -> Maybe FileSequenceMode -> FileSequenceMode
+sumFileSequenceMode a (Just b) = FileSequenceMode owrp owwp owep grrp grwp grep otrp otwp otep syml
+  where hasSameMode mode_ a_ b_ = if mode_ a_ == mode_ b_ then mode_ a else Nothing
+        owrp = hasSameMode ownerReadPerm  a b
+        owwp = hasSameMode ownerWritePerm a b
+        owep = hasSameMode ownerExecPerm  a b
+        grrp = hasSameMode groupReadPerm  a b
+        grwp = hasSameMode groupWritePerm a b
+        grep = hasSameMode groupExecPerm  a b
+        otrp = hasSameMode otherReadPerm  a b
+        otwp = hasSameMode otherWritePerm a b
+        otep = hasSameMode otherExecPerm  a b
+        syml = hasSameMode isSymLink      a b
+sumFileSequenceMode a Nothing = a
 
 -- | Structure to store relevant file sequence informations
 data FileSequenceStatus = FileSequenceStatus
-  { perms   :: Maybe Permissions      -- ^ Different permissions found for a sequence
+  { perms   :: Maybe FileSequenceMode      -- ^ Different permissions found for a sequence
   , missing :: [FilePath]       -- ^ List of missing frames
   , maxSize :: FileOffset       -- ^ Max size found in all the frames
-  , minSize :: FileOffset       -- ^ Min size found in all the frames
+  , minSize :: FileOffset       -- ^ Total size found in all the frames
+  , totSize :: FileOffset       -- ^ Min size found in all the frames
     -- other infos will be stored here !
   } deriving Show
 
 -- |Construct a new file sequence status
 newFileSequenceStatus :: FileSequenceStatus
-newFileSequenceStatus = FileSequenceStatus Nothing [] minBound maxBound
+newFileSequenceStatus = FileSequenceStatus Nothing [] minBound maxBound 0
 
 -- |With the new frame of a filesequence, update the file sequence status data
 foldStatus :: FileSequenceStatus -> [FilePath] -> IO FileSequenceStatus
@@ -65,21 +69,23 @@ foldStatus fss (x:xs) = do
   isNotMissing <- fileExist x
   if isNotMissing
     then do
+      --status <- getSymbolicLinkStatus x
       status <- getFileStatus x
       foldStatus (update_ status fss) xs
     else
       foldStatus (missing_ x fss) xs
   where update_ st_ fss_ = fss_
-          { perms = Just $ sumPermissions (permissionsFromFileStatus st_) (perms fss_)
+          { perms = Just $ sumFileSequenceMode (modeFromFileStatus st_) (perms fss_)
           , maxSize = max (fileSize st_) (maxSize fss_)
           , minSize = min (fileSize st_) (minSize fss_)
+          , totSize = (fileSize st_) + (totSize fss_)
           }
         missing_ x_ fss_= fss_
           { missing = x_:missing fss_}
 
 foldStatus fss_ [] = return fss_
 
--- Returns the status of a FileSequence
+-- |Returns the status of a FileSequence
 fileSequenceStatus :: FileSequence -> IO FileSequenceStatus
 fileSequenceStatus fs_ = foldStatus newFileSequenceStatus (frameList fs_)
 

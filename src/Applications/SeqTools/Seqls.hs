@@ -7,7 +7,6 @@ import System.Environment
 import System.Console.GetOpt
 import System.Directory
 import Control.Monad (liftM)
-
 --import Data.List
 
 -- seqls command.
@@ -24,8 +23,8 @@ import Control.Monad (liftM)
 data SeqLsData = SeqLsData
     { outputFormat    :: FormatingOptions
     , pathList        :: [String]
-    , stat            :: Bool
     , recursive       :: Bool
+    , minFrames       :: Int
     } deriving Show
 
 -- |Default seqls datas
@@ -33,8 +32,8 @@ defaultOptions :: SeqLsData
 defaultOptions = SeqLsData
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
-    , stat=True
-    , recursive=False
+    , recursive = False
+    , minFrames = 1
     }
 
 -- |List of options modifiers
@@ -42,11 +41,17 @@ options :: [OptDescr (SeqLsData -> SeqLsData)]
 options =
     [
       Option "f" ["format"]
-        (ReqArg  (updateFormat.setFormatFromString)  "[nuke|rv|printf]")
+        (ReqArg (updateFormat.setFormatFromString) "[nuke|rv|printf]")
          "Formating style of the output"
+    , Option "j" ["min"]
+        (ReqArg (\x opt -> opt {minFrames=(read x)}) "1")
+         "Minimal number of frames for a sequence"
     , Option "g" ["fullpath"]
-        (NoArg (updateFormat (setFullPath True)) )
+        (NoArg (updateFormat (setFullPath True)))
         "Display sequence with full path"
+    , Option "m" ["missing"]
+       (NoArg (updateFormat (setMissing True)))
+       "Show missing frames"
     , Option "l" ["long"]
        (NoArg (updateFormat (setLongOption True)))
        "Long listing format, provide detailed informations on the sequence"
@@ -81,19 +86,26 @@ showFoundSequences :: SeqLsData -> IO ()
 showFoundSequences opts = do
   -- partition directories and files
   (directories, files) <- splitPaths (pathList opts)
+  
+  --recursiveDirWalk res $ head directories
+  --where res lt = do 
+  --         fss <- fileSequencesFromFiles lt
+  --         mapM_ print fss
+
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)
         else return directories
-  -- find sequences in directories
+  --find sequences in directories
   sequencesInDirs  <- fileSequencesFromPaths alldirs
-  -- same for the files
+  --same for the files
   sequencesOfFiles <- fileSequencesFromFiles files
-  -- show formatted result
-  let allSequences = sequencesOfFiles ++ sequencesInDirs
+  --show formatted result
+  let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   status <- mapM fileSequenceStatus allSequences
   mapM_ (putStrLn.format) (zip allSequences status)
   where format = formatResult (outputFormat opts)
+        filterMinFrame = filter (\fs -> (lastFrame fs) - (firstFrame fs) >= (minFrames opts)-1)
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
