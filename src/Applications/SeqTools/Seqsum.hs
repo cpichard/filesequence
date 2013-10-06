@@ -1,6 +1,7 @@
 module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Hash
+import System.FileSequence.Format
 import System.Environment
 import System.Console.GetOpt
 import System.Directory
@@ -12,7 +13,7 @@ data SeqSumData = SeqSumData
     , minFrames       :: Int
     } deriving Show
 
--- |Default seqls datas
+-- |Default seqsum datas
 defaultOptions :: SeqSumData
 defaultOptions = SeqSumData
     { pathList = ["."]
@@ -53,8 +54,9 @@ runSeqSum opts = do
   --show formatted result
   let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   hashes <- mapM fileSequenceSum allSequences 
-  mapM_ putStrLn hashes
+  mapM_ (putStrLn.format) (zip allSequences hashes)
   where filterMinFrame = filter (\fs -> (lastFrame fs) - (firstFrame fs) >= (minFrames opts)-1)
+        format x = (formatSequenceFunction defaultFormatingOptions (fst x)) ++ "  " ++ (snd x)
 
 splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
 splitPaths []     = return ([],[])
