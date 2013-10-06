@@ -14,6 +14,7 @@ import System.FileSequence
 import System.FileSequence.Status
 import Data.List
 import Text.Printf
+import Data.Bits
 -- HERE : formating arguments/options
 -- remove formatAs functions,
 -- add a function to display details on the sequence
@@ -120,20 +121,19 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 
 formatFrameFunction :: FormatingOptions -> FileSequence -> String
 formatFrameFunction _ fss = 
-    showp (firstFrame fss) ++ showp (lastFrame fss)
-    where showp n = pad 6 ' ' (show n)
+    showp (firstFrame fss) ++ " " ++ showp (lastFrame fss)
+    where showp n = padBy 5 ' ' (show n)
 
 formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> String
 formatSizesFunction _ fss =
     showra (minSize fss) ++ "  " ++ showra (maxSize fss) ++ "  " ++ showra (totSize fss)
-    where showra size = showSize (fromIntegral size) ["", "K", "M", "G", "T"]
-          showSize :: Float -> [String] -> String
-          showSize s (x:xs) = if s < 1024 
-                                  then showp $ printf "%4.1f%s" s x
-                                  else showSize ff xs 
-                              where ff = (s / 1024) :: Float
-          showSize s _ = showp (show s) ++ "P"
-          showp n = pad 6 ' ' n
+    where showra s 
+            | shiftR s 10 <= 0 = showp $ show s
+            | shiftR s 20 <= 0 = showp $ printf "%4.2fK" ((fromIntegral s)/1024 :: Float)
+            | shiftR s 30 <= 0 = showp $ printf "%4.2fM" ((fromIntegral s)/(1024*1024) :: Float)
+            | shiftR s 40 <= 0 = showp $ printf "%4.2fG" ((fromIntegral s)/(1024*1024*1024) :: Float)
+            | otherwise        = showp $ printf "%4.2fT" ((fromIntegral s)/(1024*1024*1024*1024) :: Float)
+          showp n = padBy 5 ' ' n :: String
 
 
 formatPermFunction :: FormatingOptions -> FileSequenceStatus -> String
@@ -184,9 +184,11 @@ formatMissing _ fss =
 --TODO formatUserFunction :: FormatingOptions -> (FileSequenceStatus -> String)
 --TODO formatUserFunction _ = (\fss -> "todo")
 
-pad :: Int      -- Size of the returned string
-    -> Char     -- Character to add if 
-    -> String
+padBy :: Int    -- Pad to a multiple of this number
+    -> Char     -- Character used to pad 
+    -> String   -- String to pad
     -> String   
-pad n c s = replicate (n - length s) c ++ s
+padBy n c s = replicate (mod (- length s) n) c ++ s
+
+
 
