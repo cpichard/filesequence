@@ -74,12 +74,12 @@ foldStatus fs fss (x:xs) = do
       foldStatus fs (update_ status fss) xs
     else
       foldStatus fs (missing_ x fss) xs
-  where filepath fn = frameName fs fn
+  where filepath = frameName fs 
         update_ st_ fss_ = fss_
           { perms = Just $ sumFileSequenceMode (modeFromFileStatus st_) (perms fss_)
           , maxSize = max (fileSize st_) (maxSize fss_)
           , minSize = min (fileSize st_) (minSize fss_)
-          , totSize = (fileSize st_) + (totSize fss_)
+          , totSize = fileSize st_ + totSize fss_
           }
         missing_ x_ fss_= fss_
           { missing = x_:missing fss_}

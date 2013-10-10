@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 module System.FileSequence.Hash where
 
 import qualified Data.ByteString as BS
@@ -12,15 +11,15 @@ import Control.Monad
 fileSequenceSum :: FileSequence -> IO String
 fileSequenceSum fs = do
     digest <- foldM processFile (hashInit :: Context SHA224) (frameList fs) 
-    hend <- return $ hashFinalize digest
+    let hend = hashFinalize digest
     return $ show hend
-    where processFile mdc f = withFile f ReadMode $ (\h -> hashFile h mdc)
+    where processFile mdc f = withFile f ReadMode (`hashFile` mdc)
           hashFile h m = do
             eof <- hIsEOF h
             if eof
               then return m
               else do
                 chunk <- BS.hGet h 512
-                mdc <- return $ hashUpdate m chunk
+                let mdc = hashUpdate m chunk
                 mdc `seq` hashFile h mdc
 

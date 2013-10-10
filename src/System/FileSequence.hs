@@ -153,7 +153,7 @@ fileSequencesFromList nameList = findseq nameList []
                         let (a,b) = break (sameSequence fs) found in 
                         case b of 
                           []     -> findseq xs (fs:found)
-                          (y:ys) -> findseq xs $ (addFrame y fs):(a++ys)
+                          (y:ys) -> findseq xs $ addFrame y fs : (a++ys)
             findseq [] found = found
 
 -- |Return a FileSequence if the name follows the convention
@@ -161,9 +161,9 @@ fileSequenceFromName :: String -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
-            -> Just $ FileSequence { firstFrame = (toFloat num)
-                                   , lastFrame = (toFloat num)
-                                   , paddingLength = (Just (length num))
+            -> Just  FileSequence  { firstFrame = toFloat num
+                                   , lastFrame = toFloat num
+                                   , paddingLength = Just (length num)
                                    , path = path_
                                    , name = fullName
                                    , ext = ext_
@@ -217,7 +217,5 @@ recursiveDirWalk func topdir = do
   forM_ properNames $ \name_ -> do
     let path_ = topdir </> name_
     isDirectory <- doesDirectoryExist path_
-    if isDirectory
-      then recursiveDirWalk func path_ 
-      else return ()
+    when isDirectory $ recursiveDirWalk func path_ 
   return ()

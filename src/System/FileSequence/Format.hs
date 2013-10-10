@@ -17,7 +17,6 @@ import Data.List
 import Text.Printf
 import Data.Bits
 -- HERE : formating arguments/options
--- remove formatAs functions,
 -- add a function to display details on the sequence
 
 data SequenceFormat = Nuke | Rv | Printf
@@ -125,6 +124,7 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
              | fullpath_ = path
              | otherwise = const ""
 
+-- |Format the frame section
 formatFrameFunction :: FormatingOptions -> FileSequence -> String
 formatFrameFunction _ fss = 
     showp (firstFrame fss) ++ " " ++ showp (lastFrame fss)
@@ -135,10 +135,10 @@ formatSizesFunction _ fss =
     showra (minSize fss) ++ "  " ++ showra (maxSize fss) ++ "  " ++ showra (totSize fss)
     where showra s 
             | shiftR s 10 <= 0 = showp $ show s
-            | shiftR s 20 <= 0 = showp $ printf "%4.2fK" ((fromIntegral s)/1024 :: Float)
-            | shiftR s 30 <= 0 = showp $ printf "%4.2fM" ((fromIntegral s)/(1024*1024) :: Float)
-            | shiftR s 40 <= 0 = showp $ printf "%4.2fG" ((fromIntegral s)/(1024*1024*1024) :: Float)
-            | otherwise        = showp $ printf "%4.2fT" ((fromIntegral s)/(1024*1024*1024*1024) :: Float)
+            | shiftR s 20 <= 0 = showp $ printf "%4.2fK" (fromIntegral s/1024 :: Float)
+            | shiftR s 30 <= 0 = showp $ printf "%4.2fM" (fromIntegral s/(1024*1024) :: Float)
+            | shiftR s 40 <= 0 = showp $ printf "%4.2fG" (fromIntegral s/(1024*1024*1024) :: Float)
+            | otherwise        = showp $ printf "%4.2fT" (fromIntegral s/(1024*1024*1024*1024) :: Float)
           showp n = padBy 5 ' ' n :: String
 
 
@@ -163,33 +163,33 @@ formatPermFunction _ =
                       , showPerm otherExecPerm  "x"
                       ]
 
+-- |Format missing frames
 formatMissing :: FormatingOptions -> FileSequenceStatus -> String
 formatMissing _ fss = 
     "[" ++ showFrames ++ "]"
     where showFrames = intercalate ", " $ map tupleToString (groupContiguousFrames $ sort (missing fss))
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
-          tupleToString l | fst l == snd l = show $ fst l
+          tupleToString l | uncurry (==) l = show $ fst l
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)
 
---
---TODO formatUserFunction :: FormatingOptions -> (FileSequenceStatus -> String)
---TODO formatUserFunction _ = (\fss -> "todo")
-
+-- |Pad a string 
 padBy :: Int    -- Pad to a multiple of this number
     -> Char     -- Character used to pad 
     -> String   -- String to pad
     -> String   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
+-- |Returns a partitions of contiguous frames
 groupContiguousFrames :: [Int] -> [(Int, Int)]
 groupContiguousFrames (x:xs) = grpCon x x xs []
    where grpCon fir las (x':xs') ret = if las+1 == x'
                                         then grpCon fir x' xs' ret
                                         else grpCon x' x' xs' (ret++[(fir, las)])      
-         grpCon fir las _ ret = (ret++[(fir, las)])
+         grpCon fir las _ ret = ret ++ [(fir, las)]
 groupContiguousFrames _      = []  
 
+-- | Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
-splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ (frameRange fs) \\ (missing fss)
+splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ frameRange fs \\ missing fss
     where buildSeq (ff, lf) = fs {firstFrame=ff, lastFrame=lf}
 

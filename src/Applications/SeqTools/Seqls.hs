@@ -45,7 +45,7 @@ options =
         (ReqArg (updateFormat.setFormatFromString) "[nuke|rv|printf]")
          "Formating style of the output"
     , Option "j" ["min"]
-        (ReqArg (\x opt -> opt {minFrames=(read x)}) "1")
+        (ReqArg (\x opt -> opt {minFrames=read x}) "1")
          "Minimal number of frames for a sequence"
     , Option "g" ["fullpath"]
         (NoArg (updateFormat (setFullPath True)))
@@ -110,8 +110,8 @@ showFoundSequences opts = do
   -- finally display all sequences
   mapM_ (putStrLn.format) zipped
   where format = formatResult (outputFormat opts)
-        filterMinFrame = filter (\fs -> (lastFrame fs) - (firstFrame fs) >= (minFrames opts)-1)
-        contSeqs st as = concat $ map (\(a,b) -> splitNonContiguous a b) $ zip st as
+        filterMinFrame = filter (\fs -> lastFrame fs - firstFrame fs >= minFrames opts - 1)
+        contSeqs st as = concatMap (uncurry splitNonContiguous) $ zip st as
         contZipped st_ as_ = do 
                         contStatus <- mapM fileSequenceStatus (contSeqs st_ as_)
                         return $ zip (contSeqs st_ as_) contStatus

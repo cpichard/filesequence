@@ -26,7 +26,7 @@ options :: [OptDescr (SeqSumData -> SeqSumData)]
 options =
     [
       Option "j" ["min"]
-        (ReqArg (\x opt -> opt {minFrames=(read x)}) "1")
+        (ReqArg (\x opt -> opt {minFrames=read x}) "1")
          "Minimal number of frames for a sequence"
     , Option "R" ["recursive"]
        (NoArg (\opt -> opt {recursive=True}))
@@ -55,8 +55,8 @@ runSeqSum opts = do
   let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   hashes <- mapM fileSequenceSum allSequences 
   mapM_ (putStrLn.format) (zip allSequences hashes)
-  where filterMinFrame = filter (\fs -> (lastFrame fs) - (firstFrame fs) >= (minFrames opts)-1)
-        format x = (formatSequenceFunction defaultFormatingOptions (fst x)) ++ "  " ++ (snd x)
+  where filterMinFrame = filter (\fs -> lastFrame fs - firstFrame fs >= minFrames opts - 1)
+        format x = formatSequenceFunction defaultFormatingOptions (fst x) ++ "  " ++ snd x
 
 splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
 splitPaths []     = return ([],[])
