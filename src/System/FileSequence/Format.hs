@@ -161,7 +161,7 @@ formatPermFunction _ =
 formatMissing :: FormatingOptions -> FileSequenceStatus -> String
 formatMissing _ fss = 
     "[" ++ showFrames ++ "]"
-    where showFrames = intercalate ", " $ map tupleToString (groupContiguousFrames (missing fss))
+    where showFrames = intercalate ", " $ map tupleToString (groupContiguousFrames $ sort (missing fss))
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
           tupleToString l | fst l == snd l = show $ fst l
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)
@@ -185,6 +185,6 @@ groupContiguousFrames (x:xs) = grpCon x x xs []
 groupContiguousFrames _      = []  
 
 splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
-splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ (frameRange fs) \\ (missing fss)
+splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ (frameRange fs) \\ (missing fss)
     where buildSeq (ff, lf) = fs {firstFrame=ff, lastFrame=lf}
 
