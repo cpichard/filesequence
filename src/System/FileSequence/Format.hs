@@ -69,9 +69,14 @@ formatResult opts =
                           $ consIf (showStats opts) (formatSizesFunction opts . snd)
                           $ consIf (showStats opts) (formatFrameFunction opts . fst)
                           $ consIf True (formatSequenceFunction opts . fst)
+                          $ consIf showFrameBehind (formatFrameFunction opts . fst)
                           $ consIf (showMissing opts) (formatMissing opts . snd) []
               spacefunc _ = "  " -- Add space between 
               consIf x y = if x then (y:) else id
+              showFrameBehind = case sequenceFormat opts of
+                                   Rv -> False
+                                   _  -> not (showStats opts) 
+                                   
 
 -- |Returns the formating function associated to the formating options
 formatSequenceFunction :: FormatingOptions -> FileSequence -> String
