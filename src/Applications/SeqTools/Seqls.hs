@@ -11,7 +11,6 @@ import Control.Monad (liftM)
 
 -- seqls command.
 -- Search and display all the sequences in the given path
--- TODO : add search stereo option
 -- TODO add full status options
 -- TODO add all files as opposed to only sequences
 -- TODO add ordering options by size, etc
@@ -25,6 +24,7 @@ data SeqLsData = SeqLsData
     , pathList        :: [String]
     , recursive       :: Bool
     , minFrames       :: Int
+    , contiguous      :: Bool
     } deriving Show
 
 -- |Default seqls datas
@@ -34,6 +34,7 @@ defaultOptions = SeqLsData
     , pathList = ["."]
     , recursive = False
     , minFrames = 1
+    , contiguous = False
     }
 
 -- |List of options modifiers
@@ -58,6 +59,9 @@ options =
     , Option "R" ["recursive"]
        (NoArg (\opt -> opt {recursive=True}))
        "Recursive search of file sequences"
+    , Option "c" ["contiguous"]
+       (NoArg (\opt -> opt {contiguous=True}))
+       "Display sequence with contiguous frame only"
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
@@ -87,11 +91,7 @@ showFoundSequences opts = do
   -- partition directories and files
   (directories, files) <- splitPaths (pathList opts)
   
-  --recursiveDirWalk res $ head directories
-  --where res lt = do 
-  --         fss <- fileSequencesFromFiles lt
-  --         mapM_ print fss
-
+  -- recursive mode ?
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)
@@ -100,12 +100,21 @@ showFoundSequences opts = do
   sequencesInDirs  <- fileSequencesFromPaths alldirs
   --same for the files
   sequencesOfFiles <- fileSequencesFromFiles files
-  --show formatted result
+  --look for sequence extra infos
   let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   status <- mapM fileSequenceStatus allSequences
-  mapM_ (putStrLn.format) (zip allSequences status)
+  --only contiguous sequences ? -- FIXME do this partition before
+  zipped <- if contiguous opts
+              then contZipped status allSequences
+              else return (zip allSequences status)
+  -- finally display all sequences
+  mapM_ (putStrLn.format) zipped
   where format = formatResult (outputFormat opts)
         filterMinFrame = filter (\fs -> (lastFrame fs) - (firstFrame fs) >= (minFrames opts)-1)
+        contSeqs st as = concat $ map (\(a,b) -> splitNonContiguous a b) $ zip st as
+        contZipped st_ as_ = do 
+                        contStatus <- mapM fileSequenceStatus (contSeqs st_ as_)
+                        return $ zip (contSeqs st_ as_) contStatus
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()

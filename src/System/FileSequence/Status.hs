@@ -52,10 +52,10 @@ sumFileSequenceMode a Nothing = a
 -- | Structure to store relevant file sequence informations
 data FileSequenceStatus = FileSequenceStatus
   { perms   :: Maybe FileSequenceMode      -- ^ Different permissions found for a sequence
-  , missing :: [FilePath]       -- ^ List of missing frames
+  , missing :: [Int]            -- ^ List of missing frames
   , maxSize :: FileOffset       -- ^ Max size found in all the frames
-  , minSize :: FileOffset       -- ^ Total size found in all the frames
-  , totSize :: FileOffset       -- ^ Min size found in all the frames
+  , minSize :: FileOffset       -- ^ Min size found in all the frames
+  , totSize :: FileOffset       -- ^ Total size found in all the frames
     -- other infos will be stored here !
   } deriving Show
 
@@ -64,17 +64,18 @@ newFileSequenceStatus :: FileSequenceStatus
 newFileSequenceStatus = FileSequenceStatus Nothing [] minBound maxBound 0
 
 -- |With the new frame of a filesequence, update the file sequence status data
-foldStatus :: FileSequenceStatus -> [FilePath] -> IO FileSequenceStatus
-foldStatus fss (x:xs) = do
-  isNotMissing <- fileExist x
+foldStatus :: FileSequence -> FileSequenceStatus -> [Int] -> IO FileSequenceStatus
+foldStatus fs fss (x:xs) = do
+  isNotMissing <- fileExist $ filepath x
   if isNotMissing
     then do
       --status <- getSymbolicLinkStatus x
-      status <- getFileStatus x
-      foldStatus (update_ status fss) xs
+      status <- getFileStatus $ filepath x
+      foldStatus fs (update_ status fss) xs
     else
-      foldStatus (missing_ x fss) xs
-  where update_ st_ fss_ = fss_
+      foldStatus fs (missing_ x fss) xs
+  where filepath fn = frameName fs fn
+        update_ st_ fss_ = fss_
           { perms = Just $ sumFileSequenceMode (modeFromFileStatus st_) (perms fss_)
           , maxSize = max (fileSize st_) (maxSize fss_)
           , minSize = min (fileSize st_) (minSize fss_)
@@ -83,11 +84,11 @@ foldStatus fss (x:xs) = do
         missing_ x_ fss_= fss_
           { missing = x_:missing fss_}
 
-foldStatus fss_ [] = return fss_
+foldStatus _ fss_ [] = return fss_
 
 -- |Returns the status of a FileSequence
 fileSequenceStatus :: FileSequence -> IO FileSequenceStatus
-fileSequenceStatus fs_ = foldStatus newFileSequenceStatus (frameList fs_)
+fileSequenceStatus fs_ = foldStatus fs_ newFileSequenceStatus (frameRange fs_)
 
 
 

@@ -8,6 +8,7 @@ module System.FileSequence.Format (
     , setFormatFromString
     , setLongOption
     , setMissing
+    , splitNonContiguous
 ) where
 
 import System.FileSequence
@@ -160,26 +161,11 @@ formatPermFunction _ =
 formatMissing :: FormatingOptions -> FileSequenceStatus -> String
 formatMissing _ fss = 
     "[" ++ showFrames ++ "]"
-    where showFrames = intercalate ", " $ map tupleToString (grpContiguous frameIntList)
+    where showFrames = intercalate ", " $ map tupleToString (groupContiguousFrames (missing fss))
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
-          tupleToString l = if fst l == snd l
-                              then show $ fst l
-                              else show (fst l) ++ "-" ++ show (snd l)
-          
-          -- Group contiguous values
-          grpContiguous (x:xs) = grpCon x x xs []
-          grpContiguous _ = []  
-          grpCon fir las (x:xs) ret = if las+1 == x
-                                        then grpCon fir x xs ret
-                                        else grpCon x x xs (ret++[(fir, las)])      
-          grpCon fir las _ ret = (ret++[(fir, las)])
+          tupleToString l | fst l == snd l = show $ fst l
+                          | otherwise      = show (fst l) ++ "-" ++ show (snd l)
 
-          -- List of frame numbers from filenames
-          frameIntList = sort $ foldFrames (missing fss) []
-          foldFrames (x:xs) fr = case fileSequenceFromName x of
-                                   Just fs -> foldFrames xs ((firstFrame fs):fr)
-                                   Nothing -> foldFrames xs fr
-          foldFrames [] fr = fr
 --
 --TODO formatUserFunction :: FormatingOptions -> (FileSequenceStatus -> String)
 --TODO formatUserFunction _ = (\fss -> "todo")
@@ -190,5 +176,15 @@ padBy :: Int    -- Pad to a multiple of this number
     -> String   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
+groupContiguousFrames :: [Int] -> [(Int, Int)]
+groupContiguousFrames (x:xs) = grpCon x x xs []
+   where grpCon fir las (x':xs') ret = if las+1 == x'
+                                        then grpCon fir x' xs' ret
+                                        else grpCon x' x' xs' (ret++[(fir, las)])      
+         grpCon fir las _ ret = (ret++[(fir, las)])
+groupContiguousFrames _      = []  
 
+splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
+splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ (frameRange fs) \\ (missing fss)
+    where buildSeq (ff, lf) = fs {firstFrame=ff, lastFrame=lf}
 
