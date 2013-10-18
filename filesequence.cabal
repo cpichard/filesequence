@@ -24,3 +24,9 @@ executable seqsum
   ghc-options: -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqsum.hs
+
+executable seqcp
+  build-depends: base, filesequence, cryptohash >= 0.9, directory, filepath
+  ghc-options: -Wall -O2 -rtsopts 
+  hs-source-dirs:  src/Applications/SeqTools/
+  main-is:  Seqcp.hs

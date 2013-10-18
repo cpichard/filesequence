@@ -19,6 +19,7 @@ module System.FileSequence (
     -- ** From names
     fileSequencesFromList,
     fileSequenceFromName,
+    fileSequenceFromPrintfFormat,
     -- * Accessors
     frameName,
     frameRange,
@@ -49,6 +50,10 @@ extSepReg = "(\\.)"
 -- * Regex used to find sequences
 fileInSeq :: String
 fileInSeq = "(.*?)" ++ frameSepReg ++ "([0-9]+)"++ extSepReg ++ "([a-zA-Z0-9]+)$"
+
+-- * Sequence in printf format
+seqInPrintf :: String
+seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-9]+)$"
 
 -- * Datatype
 -- |File sequence data structure.
@@ -161,8 +166,8 @@ fileSequenceFromName :: String -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
-            -> Just  FileSequence  { firstFrame = toFloat num
-                                   , lastFrame = toFloat num
+            -> Just  FileSequence  { firstFrame = (read num :: Int)
+                                   , lastFrame =  (read num :: Int)
                                    , paddingLength = Just (length num)
                                    , path = path_
                                    , name = fullName
@@ -174,7 +179,27 @@ fileSequenceFromName name_ =
 
     where (path_, filename) = splitFileName name_
           regResult = filename =~ fileInSeq :: [[String]]
-          toFloat nn = read nn :: Int
+
+-- | Decode the filesequence from a printf format and the first+last frames 
+fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence
+fileSequenceFromPrintfFormat name_ ff lf = 
+    case regResult of
+      [[ _, fullName, sep1, code, sep2, ext_ ]]
+          -> Just FileSequence
+                    { firstFrame = min ff lf
+                    , lastFrame = max ff lf
+                    , paddingLength = Just $ (read code :: Int)
+                    , path = path_
+                    , name = fullName
+                    , ext = ext_
+                    , frameSep = sep1
+                    , extSep = sep2
+                    }
+      _ -> Nothing
+
+    where (path_, filename) = splitFileName name_
+          regResult = filename =~ seqInPrintf :: [[String]]
+
 
 -- |Returns the filename of the frame number
 frameName :: FileSequence -> Int -> FilePath
