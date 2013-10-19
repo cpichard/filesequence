@@ -137,18 +137,6 @@ fileSequencesFromFiles files = do
   return $ fileSequencesFromList existingFiles
 
 -- |Returns the file sequences of a list of names
--- fileSequencesFromList :: [String] -> [FileSequence]
--- fileSequencesFromList nameList =
---    mergeSeq $ groupBy sameSequence (sort potentialSeqs)
---    where   potentialSeqs = findseq nameList []
---            findseq (x:xs) found =
---                case fileSequenceFromName x of
---                    Nothing -> findseq xs found
---                    Just fs -> findseq xs (fs:found)
---            findseq [] found = found
---            mergeSeq = map (foldr1 addFrame)
-
--- |Returns the file sequences of a list of names
 fileSequencesFromList :: [String] -> [FileSequence]
 fileSequencesFromList nameList = findseq nameList []
     where   findseq (x:xs) found =
@@ -206,7 +194,7 @@ frameName :: FileSequence -> Int -> FilePath
 frameName fs_ frame_ = formatSequence fs_ path formatFrames
     where   formatFrames fs = printf (padNumber (paddingLength fs)) frame_
             formatSequence fs path_ padding_ =
-                path_ fs ++ name fs ++ frameSep fs ++ padding_ fs ++ extSep fs ++ ext fs
+                joinPath [path_ fs,  name fs ++ frameSep fs ++ padding_ fs ++ extSep fs ++ ext fs]
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
