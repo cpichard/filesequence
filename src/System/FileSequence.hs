@@ -168,7 +168,7 @@ fileSequenceFromName name_ =
     where (path_, filename) = splitFileName name_
           regResult = filename =~ fileInSeq :: [[String]]
 
--- | Decode the filesequence from a printf format and the first+last frames 
+-- |Decode the filesequence from a printf format and the first and last frames 
 fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence
 fileSequenceFromPrintfFormat name_ ff lf = 
     case regResult of
