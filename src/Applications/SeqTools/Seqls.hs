@@ -7,16 +7,12 @@ import System.Environment
 import System.Console.GetOpt
 import System.Directory
 import Control.Monad (liftM)
---import Data.List
 
 -- seqls command.
--- Search and display all the sequences in the given path
+-- Search and display sequences found in a given path or from a list of files
 -- TODO add full status options
--- TODO add all files as opposed to only sequences
 -- TODO add ordering options by size, etc
 -- TODO verbose
--- TODO : format as lseq
-
 
 -- |Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
@@ -101,6 +97,8 @@ showFoundSequences opts = do
   --same for the files
   sequencesOfFiles <- fileSequencesFromFiles files
   --look for sequence extra infos
+  -- TODO: when not needed, bypass getStatus as it is taking
+  --       a HUGE amount of time 
   let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   status <- mapM fileSequenceStatus allSequences
   --only contiguous sequences ? -- FIXME do this partition before
