@@ -4,14 +4,15 @@
 module Main where
 
 import System.FileSequence
-import System.FileSequence.Format
-import System.FileSequence.Status
+import System.FileSequence.Manip
 import System.Environment
 import System.Console.GetOpt
-import System.Directory
-import Control.Monad (liftM)
 import System.FilePath.Posix
-
+import System.Directory
+import System.Exit
+import System.IO.Error
+import Control.Exception
+import Control.Monad
 
 data SeqCpOptions =
   SeqCpOptions
@@ -39,12 +40,25 @@ options =
             "Verbose mode"
     ] 
 
+
 copySequence :: SeqCpOptions -> IO ()
 copySequence cpOpts = do
-  case srcSeq cpOpts of
-    Nothing -> error "Could not deduce sequence format"
-    Just seqn -> do putStrLn "Copying sequence"
-                    print seqn
+  case (srcSeq cpOpts, dstPath cpOpts) of
+    (Just s, Just p) -> do 
+        handle handleExceptAndExit $ void $ fileSequenceCopy s p
+        where handleExcept :: IOException -> IO ()
+              handleExcept e 
+                | isDoesNotExistError e = do 
+                    putStrLn $ "error: destination " ++ p ++ " does not exist"
+                | isPermissionError e = do
+                    putStrLn $ "error: wrong permissions on " ++ p
+                | otherwise = do
+                    print $ show e
+              handleExceptAndExit e = handleExcept e >> exitFailure
+    (_, _)  -> do putStrLn "error: missing or wrong arguments."
+                  putStrLn "usage: seqcp source_sequence.%05d.txt 1 200 /tmp/dest_dir"
+                  exitFailure
+
 showErrorMessage :: IO ()
 showErrorMessage = 
   putStrLn $ usageInfo "seqcp - copy sequence of files" options

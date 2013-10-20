@@ -18,8 +18,6 @@ fileSequenceRemove fs_ =
 -- Returns the newly generated filesequence (TODO maybe ? or error)
 fileSequenceCopy :: FileSequence -> FilePath -> IO FileSequence
 fileSequenceCopy fs_ path_ = do
-    dirExists <- doesDirectoryExist path_
-    when (not dirExists) $ error ("Directory " ++ show path_ ++ " does not exist")
     pathSrc <- canonicalizePath $ path fs_
     pathDst <- canonicalizePath path_
     if pathSrc == pathDst
@@ -27,6 +25,7 @@ fileSequenceCopy fs_ path_ = do
         else let fsr_ = fs_ {path=pathDst} in
              do mapM_ (uncurry copyIfExist) $ zip (frameList fs_) (frameList fsr_) 
                 return fsr_
+    -- NOTE : test overwrite ?
     where copyIfExist sf_ df_ = do 
              exist <- doesFileExist sf_
              when exist (copyFile sf_ df_)
@@ -34,8 +33,6 @@ fileSequenceCopy fs_ path_ = do
 -- |
 fileSequenceMove :: FileSequence -> FilePath -> IO FileSequence
 fileSequenceMove fs_ path_ = do
-    dirExists <- doesDirectoryExist path_
-    when (not dirExists) $ error ("Directory " ++ show fs_ ++ " does not exist")
     pathSrc <- canonicalizePath $ path fs_
     pathDst <- canonicalizePath path_
     if pathSrc == pathDst
