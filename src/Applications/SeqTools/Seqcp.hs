@@ -7,13 +7,12 @@ import System.FileSequence
 import System.FileSequence.Manip
 import System.Environment
 import System.Console.GetOpt
-import System.FilePath.Posix
-import System.Directory
 import System.Exit
 import System.IO.Error
 import Control.Exception
 import Control.Monad
 
+-- |Options for seqcp command line 
 data SeqCpOptions =
   SeqCpOptions
     { verbose       :: Bool
@@ -32,6 +31,7 @@ defaultOptions =
     , args = []
     }
 
+-- |List of option modifiers
 options :: [OptDescr (SeqCpOptions -> SeqCpOptions)]
 options = 
     [
@@ -40,7 +40,7 @@ options =
             "Verbose mode"
     ] 
 
-
+-- |Copy the sequence provided in the options
 copySequence :: SeqCpOptions -> IO ()
 copySequence cpOpts = do
   case (srcSeq cpOpts, dstPath cpOpts) of
@@ -79,8 +79,8 @@ processOptions optMod = readDstPath processedOptions
 
 main :: IO ()
 main = do
-  args <- getArgs
-  let cmdlopts = getOpt RequireOrder options args
+  args_ <- getArgs
+  let cmdlopts = getOpt RequireOrder options args_
   case cmdlopts of
     (o, n, [])  -> copySequence $ processOptions o n
     _           -> showErrorMessage
