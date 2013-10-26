@@ -64,7 +64,7 @@ fileSequenceTouch fs_ = do
     -- TODO : recompute filesequence attributes like padding ?
     return fs_
     where touch f = do 
-            exists <- fileExist f
+            exists <- doesFileExist f
             if exists
               then touchFile f
               --  TODO : get the default permissions of the user

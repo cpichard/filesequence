@@ -3,6 +3,7 @@ module System.FileSequence.Status where
 import System.FileSequence
 import System.Posix.Files
 import System.Posix.Types
+import System.Directory
 
 -- | A file permission
 data FileSequenceMode = FileSequenceMode
@@ -66,7 +67,7 @@ newFileSequenceStatus = FileSequenceStatus Nothing [] minBound maxBound 0
 -- |With the new frame of a filesequence, update the file sequence status data
 foldStatus :: FileSequence -> FileSequenceStatus -> [Int] -> IO FileSequenceStatus
 foldStatus fs fss (x:xs) = do
-  isNotMissing <- fileExist $ filepath x
+  isNotMissing <- doesFileExist $ filepath x
   if isNotMissing
     then do
       --status <- getSymbolicLinkStatus x
