@@ -1,6 +1,6 @@
 -- Seqcp : copy sequences of file
 -- 
--- ex : seqcp toto.####.exr 1 3 /home/cyril/tmp
+-- ex : seqcp toto.%05d.exr 1 3 /home/cyril/tmp
 module Main where
 
 import System.FileSequence
