@@ -12,9 +12,7 @@ module System.FileSequence (
     FileSequence(..),
     -- * Creation functions
     -- ** From existing directory or files
-    fileSequencesFromPath,
     fileSequencesFromPaths,
-    fileSequenceFromFile,
     fileSequencesFromFiles,
     -- ** From names
     fileSequencesFromList,
@@ -26,13 +24,12 @@ module System.FileSequence (
     frameList,
     -- * Utils
     getRecursiveDirs,
-    recursiveDirWalk
 ) where
 
 import System.Directory
-import System.IO.Error
+--import System.IO.Error
 import System.FilePath
-import Control.Exception
+--import Control.Exception
 import Control.Monad
 import Data.List
 import Text.Regex.PCRE
@@ -49,7 +46,7 @@ extSepReg = "(\\.)"
 
 -- * Regex used to find sequences
 fileInSeq :: String
-fileInSeq = "(.*?)" ++ frameSepReg ++ "([0-9]+)"++ extSepReg ++ "([a-zA-Z0-9]+)$"
+fileInSeq = "(.*?)" ++ frameSepReg ++ "(-?[0-9]+)"++ extSepReg ++ "([a-zA-Z0-9]+)$"
 
 -- * Sequence in printf format
 seqInPrintf :: String
@@ -83,51 +80,27 @@ sameSequence fs1 fs2 =
 -- |Returns a copy of fs1 with an union of fs1 and fs2 frame ranges
 -- |It basically adds frame to a sequence
 addFrame :: FileSequence -> FileSequence -> FileSequence
-addFrame fs1 fs2 = fs1 { firstFrame = firstF
-                       , lastFrame = lastF
-                       , paddingLength = deducePadding
-                       }
+addFrame fs1 fs2 = 
+    fs1 { firstFrame = firstF
+        , lastFrame = lastF
+        , paddingLength = deducePadding
+        }
     where firstF = min (firstFrame fs1) (firstFrame fs2)
           lastF  = max (lastFrame fs1) (lastFrame fs2)
-          deducePadding = if paddingLength fs1 == paddingLength fs2
-                            then paddingLength fs1
-                            else Nothing
-
--- |Find all the file sequences inside path
--- TODO : find a proper way of handling exception here
-fileSequencesFromPath :: FilePath -> IO [FileSequence]
-fileSequencesFromPath path_ = do
-    canonicPath <- canonicalizePath path_
-    fileFound <- tryJust (guard . isDoesNotExistError) (getDirectoryContents canonicPath)
-    case fileFound of
-        Left _          -> return []
-        Right fileList  -> return $ fileSequencesFromList (map (combine canonicPath) fileList)
+          deducePadding
+            | paddingLength fs1 == paddingLength fs2 = paddingLength fs1
+            | otherwise = Nothing
 
 -- |Find all the file sequences inside multiple paths
 -- TODO : find a proper way of handling exception here
 fileSequencesFromPaths :: [FilePath] -> IO [FileSequence]
 fileSequencesFromPaths paths = do
-    canonicPaths <- mapM canonicalizePath (nub paths)
+    canonicPaths <- mapM canonicalizePath (nub paths) -- O(n2)
     filesFound <- mapM directoryContents canonicPaths
-    return $ fileSequencesFromList (concat filesFound)
+    return $ concat $ map fileSequencesFromList filesFound
     where directoryContents dir = do
             files <- getDirectoryContents dir
-            return $ map (combine dir) files
-
--- |Find the sequence the file belongs to.
--- |NOTE : this function can be hugely optimized as it searches all the
--- | sequences in the path instead of comparing the filename.
--- | it leads to something not logical : (x:_)  -> return $ Just x
-fileSequenceFromFile :: FilePath -> IO (Maybe FileSequence)
-fileSequenceFromFile file =
-    case fileSequenceFromName file of
-        Just fs -> do
-            fsInPath <- fileSequencesFromPath (path fs)
-            case matchFs fsInPath [fs] of
-                []      -> return Nothing
-                (x:_)  -> return $ Just x
-                where matchFs = intersectBy sameSequence
-        Nothing -> return Nothing
+            filterM doesFileExist $ map (combine dir) files
 
 -- |Find the sequences from a list of files on the disk
 -- | TODO : handle exceptions here
@@ -139,30 +112,35 @@ fileSequencesFromFiles files = do
 -- |Returns the file sequences of a list of names
 fileSequencesFromList :: [String] -> [FileSequence]
 fileSequencesFromList nameList = findseq nameList []
-    where   findseq (x:xs) found =
-                case fileSequenceFromName x of
-                    Nothing -> findseq xs found
-                    Just fs -> 
-                        let (a,b) = break (sameSequence fs) found in 
-                        case b of 
-                          []     -> findseq xs (fs:found)
-                          (y:ys) -> findseq xs $ addFrame y fs : (a++ys)
-            findseq [] found = found
+    where findseq (x:xs) found =
+            case fileSequenceFromName x of
+                Nothing -> findseq xs found
+                Just fs -> 
+                    let (a,b) = break (sameSequence fs) found in 
+                    case b of 
+                        []     -> findseq xs (fs:found)
+                        (y:ys) -> findseq xs $ addFrame y fs : (a++ys)
+          findseq [] found = found
 
 -- |Return a FileSequence if the name follows the convention
 fileSequenceFromName :: String -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
-            -> Just  FileSequence  { firstFrame = (read num :: Int)
-                                   , lastFrame =  (read num :: Int)
-                                   , paddingLength = Just (length num)
+            -> Just  FileSequence  { firstFrame = frameNo 
+                                   , lastFrame = frameNo 
+                                   , paddingLength = deducePadding 
                                    , path = path_
                                    , name = fullName
                                    , ext = ext_
                                    , frameSep = sep1
                                    , extSep = sep2 
                                    } 
+                where frameNo = (read num :: Int)
+                      deducePadding
+                        | frameNo >= 0 = Just (length num)
+                        | frameNo <  0 = Just $ (length num) + 1
+                        | otherwise = Nothing -- should not happen
         _   -> Nothing
 
     where (path_, filename) = splitFileName name_
@@ -176,7 +154,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
           -> Just FileSequence
                     { firstFrame = min ff lf
                     , lastFrame = max ff lf
-                    , paddingLength = Just $ (read code :: Int)
+                    , paddingLength = Just $ (read code :: Int) -- FIXME %d should be Nothing
                     , path = path_
                     , name = fullName
                     , ext = ext_
@@ -188,13 +166,10 @@ fileSequenceFromPrintfFormat name_ ff lf =
     where (path_, filename) = splitFileName name_
           regResult = filename =~ seqInPrintf :: [[String]]
 
-
 -- |Returns the filename of the frame number
 frameName :: FileSequence -> Int -> FilePath
-frameName fs_ frame_ = formatSequence fs_ path formatFrames
-    where   formatFrames fs = printf (padNumber (paddingLength fs)) frame_
-            formatSequence fs path_ padding_ =
-                joinPath [path_ fs,  name fs ++ frameSep fs ++ padding_ fs ++ extSep fs ++ ext fs]
+frameName fs_ frame_ = joinPath [path fs_, name fs_ ++ frameSep fs_ ++ frameNumber ++ extSep fs_ ++ ext fs_]
+    where frameNumber = printf (padNumber frame_ (paddingLength fs_)) frame_
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
@@ -205,11 +180,14 @@ frameList :: FileSequence -> [FilePath]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
 -- |Returns the string of the printf format for padded string
-padNumber :: Maybe Int -> String
-padNumber (Just pad_) = "%0" ++ show pad_ ++ "d"
-padNumber Nothing = "%d"
+--  account for negative frames
+--  TODO : move to frameName as it is only used there now
+padNumber :: Int -> Maybe Int -> String
+padNumber _ Nothing = "%d"
+padNumber f (Just pad_) | f >=0 = "%0" ++ show pad_ ++ "d"
+padNumber _ (Just pad_) | otherwise = "%0" ++ show (pad_+1) ++ "d"
 
--- |Real world haskell
+-- | From Real world haskell
 getRecursiveDirs :: FilePath -> IO [FilePath]
 getRecursiveDirs topdir = do
   names <- getDirectoryContents topdir
@@ -222,13 +200,3 @@ getRecursiveDirs topdir = do
       else return []
   return $ topdir:concat paths
 
-recursiveDirWalk :: ( [FilePath] -> IO () ) -> FilePath -> IO ()
-recursiveDirWalk func topdir = do
-  names <- getDirectoryContents topdir
-  func names
-  let properNames = filter (`notElem` [".", ".."]) names
-  forM_ properNames $ \name_ -> do
-    let path_ = topdir </> name_
-    isDirectory <- doesDirectoryExist path_
-    when isDirectory $ recursiveDirWalk func path_ 
-  return ()
