@@ -128,7 +128,7 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 formatFrameFunction :: FormatingOptions -> FileSequence -> String
 formatFrameFunction _ fss = 
     showp (firstFrame fss) ++ " " ++ showp (lastFrame fss)
-    where showp n = padBy 5 ' ' (show n)
+    where showp n = padBy 8 ' ' (show n)
 
 formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> String
 formatSizesFunction _ fss =
@@ -139,7 +139,7 @@ formatSizesFunction _ fss =
             | shiftR s 30 <= 0 = showp $ printf "%4.2fM" (fromIntegral s/(1024*1024) :: Float)
             | shiftR s 40 <= 0 = showp $ printf "%4.2fG" (fromIntegral s/(1024*1024*1024) :: Float)
             | otherwise        = showp $ printf "%4.2fT" (fromIntegral s/(1024*1024*1024*1024) :: Float)
-          showp n = padBy 5 ' ' n :: String
+          showp n = padBy 8 ' ' n :: String
 
 
 formatPermFunction :: FormatingOptions -> FileSequenceStatus -> String
