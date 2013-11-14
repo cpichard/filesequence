@@ -27,9 +27,7 @@ module System.FileSequence (
 ) where
 
 import System.Directory
---import System.IO.Error
 import System.FilePath
---import Control.Exception
 import Control.Monad
 import Data.List
 import Text.Regex.PCRE
@@ -92,7 +90,6 @@ addFrame fs1 fs2 =
             | otherwise = Nothing
 
 -- |Find all the file sequences inside multiple paths
--- TODO : find a proper way of handling exception here
 fileSequencesFromPaths :: [FilePath] -> IO [FileSequence]
 fileSequencesFromPaths paths = do
     canonicPaths <- mapM canonicalizePath (nub paths) -- O(n2)
@@ -103,7 +100,6 @@ fileSequencesFromPaths paths = do
             filterM doesFileExist $ map (combine dir) files
 
 -- |Find the sequences from a list of files on the disk
--- | TODO : handle exceptions here
 fileSequencesFromFiles :: [FilePath] -> IO [FileSequence]
 fileSequencesFromFiles files = do
   existingFiles <- filterM doesFileExist files
