@@ -12,7 +12,6 @@ import System.FileSequence
 import System.Directory
 import System.Posix.Files
 import System.Posix.IO
-import Control.Monad 
 
 -- |Remove all frames of the sequence
 fileSequenceRemove :: FileSequence -> IO ()
@@ -28,7 +27,7 @@ fileSequenceCopy fs_ path_ = do
     if pathSrc == pathDst
         then return fs_
         else let fsr_ = fs_ {path=pathDst} in do
-             mapFrame2 copyFile fs_ fsr_
+             mapFrames copyFile fs_ fsr_
              return fsr_ 
 
 -- |
@@ -39,19 +38,18 @@ fileSequenceMove fs_ path_ = do
     if pathSrc == pathDst
         then return fs_
         else let fsr_ = fs_ {path=pathDst} in do
-             mapFrame2 renameFile fs_ fsr_
+             mapFrames renameFile fs_ fsr_
              return fsr_
                   
--- |
-mapFrame2 :: (FilePath -> FilePath -> IO ()) 
-          -> FileSequence 
-          -> FileSequence 
+
+-- |map function for each frames (fs, fd) of the src and dst sequence
+-- src and dst must have the same number of frames
+mapFrames :: (FilePath -> FilePath -> IO ()) -- function to apply
+          -> FileSequence -- src frames
+          -> FileSequence -- dst frames
           -> IO ()
-mapFrame2 func src_ dst_ = do
-    mapM_ (uncurry doIfExist) $ zip (frameList src_) (frameList dst_) 
-    where doIfExist sf_ df_ = do 
-             exist <- doesFileExist sf_
-             when exist (func sf_ df_)
+mapFrames func src_ dst_ = do
+  mapM_ (uncurry func) $ zip (frameList src_) (frameList dst_) 
 
 -- |
 --fileSequenceRename :: FileSequence -> String -> IO FileSequence
