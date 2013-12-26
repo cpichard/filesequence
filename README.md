@@ -4,12 +4,25 @@ FILESEQUENCE
 Description
 ------------
 
-Filesequence is a toy project to learn and practice haskell. It contains a library and a few tools to manipulate sequences of files, like seqls to display the list of sequences in a directory. In terms of functionality it's pretty similar to python computer graphic kit http://cgkit.sourceforge.net/doc2/filesequencetools.html or PySeq http://rsgalloway.github.com/pyseq/ which are widely used in the vfx industry.
+Filesequence was a toy project to learn and practice haskell. As of today it contains a library and a bunch of tools that makes the life easier when you have to work with sequences of files, and is perfectly usable in production. By sequence of files we mean a set of files with a common prefix and suffix and a "counter" number in between. This library is specially tailored for the visual effect and post production industries, where the sequence of images or geometries generally share the same patterns.
 
-Synopsis
+Tools
 --------
 
-seqls [-Rg] [-f nuke|rv|printf] [files ...] [directories ...]
+###seqls
+List sequences of files in a directory
+
+`seqls [-Rgl] [-f nuke|rv|printf] [files ...] [directories ...]`
+
+###seqsum
+Compute the hash value of all sequence of file in directories. It processes all the files as a single block with the SHA224 algorithm.
+
+`seqsum  [-Rj] [files ...] [directories ...] ` 
+
+###seqcp
+Copy a sequence of file in a directory.
+
+`seqcp [-vc] /path/to/sequence.%04d.exr [first frame] [last frame] [target directory]`
 
 Installation
 ------------
@@ -17,9 +30,8 @@ Installation
 
 If you don't want to install the whole haskell eco-system, the binaries are available here :
 
-Linux 64:  
-MacOSX:  
-TODO : download links  
+Linux 64: development branch  
+MacOSX: development branch
 
 To install, just untar, unzip and copy the files in a executable path of your choice. If you need another platform, just email me or build the project from sources.
 
@@ -38,22 +50,25 @@ Once everything is setup, just run the following commands in the filesequence di
 
 `cabal install`
 
-The command `seqls` should now be installed in your haskell binary directory.
+The commands `seqls`,`seqsum`and `seqcp` should now be installed in your haskell binary directory.
 
 Examples
 --------
+### List sequence in a directory with details
 
-Diagnostic
-----------
+`seqls -lg /path/to/directory`
 
-Environment
------------
+```
+-rw-r--r--    93.09K   210.29K     7.95M         1       50  /path/to/directory/checker_board_distotest.%04d.png
+-rw-r--r--    38.35K   133.74K     4.72M         1       50  /path/to/directory/checker_board_clean.%04d.png
+```
 
-Bugs
-----
+There are 2 sequences in this folder, the minimun size of a frame is 93.09K, the maximum 210.29K, the total size of the first sequence is 7.95M, the first frame is 1, last frame 50.
 
 See also
 --------
-
+* python computer graphic kit http://cgkit.sourceforge.net/doc2/filesequencetools.html
+* PySeq http://rsgalloway.github.com/pyseq/ which are widely used in the vfx industry.
+* https://github.com/gchatelet/light_sequence_parser 
 
 
