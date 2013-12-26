@@ -1,7 +1,6 @@
 module System.FileSequence.Hash where
 
 import qualified Data.ByteString as BS
---import System.Directory
 import System.FileSequence
 import System.IO
 import Crypto.Hash

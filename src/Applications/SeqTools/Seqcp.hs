@@ -13,16 +13,16 @@ import System.IO
 import Control.Exception
 import Control.Monad
 
+-- TODO verbose mode
+
 -- |Options for seqcp command line 
 data SeqCpOptions =
   SeqCpOptions
-    { verbose       :: Bool
-    , srcSeq        :: Maybe FileSequence
-    , dstPath       :: Maybe FilePath
-    , args          :: [String]
-    , resume       :: Bool
-    -- TODO : add option to copy a subset of the frames
-    -- TODO : add option to continue on error
+    { verbose   :: Bool
+    , srcSeq    :: Maybe FileSequence
+    , dstPath   :: Maybe FilePath
+    , args      :: [String]
+    , resume    :: Bool
     }
 
 -- |Returns the default options
@@ -36,6 +36,7 @@ defaultOptions =
     , resume = False
     }
 
+-- |String prefix in case of an error 
 seqcpErrorPrefix :: String
 seqcpErrorPrefix = "seqcp error:"
 
@@ -71,13 +72,18 @@ copySequence cpOpts =
                     hPutStrLn stderr $ seqcpErrorPrefix ++ show e
 
     (_, _)  -> do putStrLn "incorrect or missing arguments."
-                  showErrorMessage 
                   exitFailure
 
-showErrorMessage :: IO ()
-showErrorMessage = 
-  putStrLn $ usageInfo "seqcp - copy sequence of files" options
-
+-- |Show the help message
+showHelpMessage :: IO ()
+showHelpMessage = do
+  putStrLn $ usageInfo helpMessage options
+  where helpMessage = 
+         unlines [ "seqcp - copy sequence of files"
+                 , "ex: "
+                 , " seqcp toto.%05d.exr 1 3 /home/john.doe/tmp"
+                 , "options:"
+                 ]
 -- |Process the command line options
 processOptions :: [SeqCpOptions -> SeqCpOptions] -> [String] -> SeqCpOptions
 processOptions optMod = readDstPath processedOptions
@@ -95,13 +101,14 @@ processOptions optMod = readDstPath processedOptions
             _ -> opt_
 
 
+-- |seqcp executable entry point
 main :: IO ()
 main = do
   args_ <- getArgs
   let cmdlopts = getOpt RequireOrder options args_
   case cmdlopts of
     (o, n, [])  -> copySequence $ processOptions o n
-    _           -> showErrorMessage
+    _           -> showHelpMessage
 
 
 

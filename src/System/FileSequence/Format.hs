@@ -16,8 +16,6 @@ import System.FileSequence.Status
 import Data.List
 import Text.Printf
 import Data.Bits
--- HERE : formating arguments/options
--- add a function to display details on the sequence
 
 data SequenceFormat = Nuke | Rv | Printf
     deriving Show
@@ -39,17 +37,19 @@ defaultFormatingOptions = FormatingOptions
   , showMissing    = False
   }
 
--- |
+-- |Modify the full path flag in the formating options
 setFullPath :: Bool -> FormatingOptions -> FormatingOptions
 setFullPath fp opts = opts {fullPath=fp}
 
+-- |Modify the show stats flag (-l) in the formating options
 setLongOption :: Bool -> FormatingOptions -> FormatingOptions
 setLongOption fp opts = opts {showStats=fp}
 
+-- |Modify the show missing flag in the formating options
 setMissing :: Bool -> FormatingOptions -> FormatingOptions
 setMissing fp opts = opts {showMissing=fp}
 
--- |
+-- |Modify the format of the output sequence
 setFormatFromString :: String -> FormatingOptions -> FormatingOptions
 setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
   where formatFromString "rv"     = Rv
@@ -57,6 +57,7 @@ setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
         formatFromString _        = Nuke
 
 -- |Standard formating for command line
+-- Builds a string from the filesequences infos and the formatin options
 formatResult :: FormatingOptions
              -> (FileSequence, FileSequenceStatus)
              -> String
@@ -103,6 +104,7 @@ formatAsNukeSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
              | fullpath_ = path
              | otherwise = const ""
 
+-- |Format the filesequence as a printf compatible string
 formatAsPrintfSequence :: Bool -> FileSequence -> String
 formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
     where formatFrame fs = case paddingLength fs of 
@@ -111,7 +113,6 @@ formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
           formatPath
              | fullpath_ = path
              | otherwise = const ""
-
 
 -- |Format sequence as the output of rvls command
 formatAsRvSequence :: Bool -> FileSequence -> String
@@ -130,6 +131,7 @@ formatFrameFunction _ fss =
     showp (firstFrame fss) ++ " " ++ showp (lastFrame fss)
     where showp n = padBy 8 ' ' (show n)
 
+-- |Format the file size with human readable Kilo Mega and so on 
 formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> String
 formatSizesFunction _ fss =
     showra (minSize fss) ++ "  " ++ showra (maxSize fss) ++ "  " ++ showra (totSize fss)
@@ -141,7 +143,8 @@ formatSizesFunction _ fss =
             | otherwise        = showp $ printf "%4.2fT" (fromIntegral s/(1024*1024*1024*1024) :: Float)
           showp n = padBy 8 ' ' n :: String
 
-
+-- |Format the file permissions
+-- Change the permission to "?" when multiple files have different permissions 
 formatPermFunction :: FormatingOptions -> FileSequenceStatus -> String
 formatPermFunction _ =
     \fss -> concatMap ($(perms fss)) showFuncs
@@ -179,7 +182,8 @@ padBy :: Int    -- Pad to a multiple of this number
     -> String   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
--- |Returns a partitions of contiguous frames
+-- |Returns partitions of contiguous frames
+-- ex: [1,2,3,6,7,9] -> [(1,3), (6,7), (9,9]
 groupContiguousFrames :: [Int] -> [(Int, Int)]
 groupContiguousFrames (x:xs) = grpCon x x xs []
    where grpCon fir las (x':xs') ret = if las+1 == x'
@@ -188,7 +192,7 @@ groupContiguousFrames (x:xs) = grpCon x x xs []
          grpCon fir las _ ret = ret ++ [(fir, las)]
 groupContiguousFrames _      = []  
 
--- | Split a sequence into a list of sequence having contiguous frames (no holes)
+-- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
 splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ frameRange fs \\ missing fss
     where buildSeq (ff, lf) = fs {firstFrame=ff, lastFrame=lf}
