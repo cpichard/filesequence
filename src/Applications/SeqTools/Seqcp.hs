@@ -56,7 +56,10 @@ options =
 copySequence :: SeqCpOptions -> IO ()
 copySequence cpOpts = 
   case (srcSeq cpOpts, dstPath cpOpts) of
-    (Just s, Just p) -> 
+    (Just s, Just p) -> do 
+        if verbose cpOpts
+          then putStrLn "I am not in the mood for talking right now"
+          else return()
         handle selectHandler $ void $ fileSequenceCopy s p selectHandler
         where selectHandler | resume cpOpts = handleExceptAndResume
                             | otherwise = handleExceptAndExit     
@@ -82,8 +85,10 @@ showHelpMessage = do
          unlines [ "seqcp - copy sequence of files"
                  , "ex: "
                  , " seqcp toto.%05d.exr 1 3 /home/john.doe/tmp"
+                 , ""
                  , "options:"
                  ]
+
 -- |Process the command line options
 processOptions :: [SeqCpOptions -> SeqCpOptions] -> [String] -> SeqCpOptions
 processOptions optMod = readDstPath processedOptions
