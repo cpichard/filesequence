@@ -57,9 +57,8 @@ copySequence :: SeqCpOptions -> IO ()
 copySequence cpOpts = 
   case (srcSeq cpOpts, dstPath cpOpts) of
     (Just s, Just p) -> do 
-        if verbose cpOpts
-          then putStrLn "I am not in the mood for talking right now"
-          else return()
+        when (verbose cpOpts)
+           $ putStrLn "I am not in the mood for talking right now"
         handle selectHandler $ void $ fileSequenceCopy s p selectHandler
         where selectHandler | resume cpOpts = handleExceptAndResume
                             | otherwise = handleExceptAndExit     
@@ -79,7 +78,7 @@ copySequence cpOpts =
 
 -- |Show the help message
 showHelpMessage :: IO ()
-showHelpMessage = do
+showHelpMessage =
   putStrLn $ usageInfo helpMessage options
   where helpMessage = 
          unlines [ "seqcp - copy sequence of files"
