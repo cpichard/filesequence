@@ -1,6 +1,7 @@
+{-# LANGUAGE DeriveDataTypeable, Rank2Types #-}
 
 -- | Module FileSequenceManip. 
--- Basic file sequence manipulation on the disk.
+-- Basic sequence of file manipulation on the disk.
 module System.FileSequence.Manip ( 
     fileSequenceRemove,
     fileSequenceCopy, 
@@ -12,6 +13,12 @@ import System.FileSequence
 import System.Directory
 import System.Posix.Files
 import System.Posix.IO
+import System.IO.Error
+import Control.Exception
+
+-- |Type synonym for the map frames exception handler
+-- |require Rank2Types
+type ExceptionHandler e = Exception e => (e -> IO ())
 
 -- |Remove all frames of the sequence
 fileSequenceRemove :: FileSequence -> IO ()
@@ -19,22 +26,31 @@ fileSequenceRemove fs_ =
    mapM_ removeFile (frameList fs_)
 
 -- | Copy a all files of a file sequence to a new directory
--- Returns the newly generated filesequence (TODO maybe ? or error)
-fileSequenceCopy :: FileSequence -> FilePath -> IO FileSequence
-fileSequenceCopy fs_ path_ = do
-    pathSrc <- canonicalizePath $ path fs_
-    pathDst <- canonicalizePath path_
-    if pathSrc == pathDst
-        then return fs_
-        else let fsr_ = fs_ {path=pathDst} in do
-             mapFrames copyFile fs_ fsr_
-             return fsr_ 
+-- Returns the newly generated filesequence
+fileSequenceCopy :: Exception e 
+                 => FileSequence 
+                 -> FilePath 
+                 -> ExceptionHandler e
+                 -> IO FileSequence
+fileSequenceCopy fs_ path_ hand_ = do
+    isDir <- doesDirectoryExist path_
+    if isDir
+      then do 
+        pathSrc <- canonicalizePath $ path fs_ 
+        pathDst <- canonicalizePath path_  
+        if pathSrc == pathDst
+          then return fs_
+          else let fsr_ = fs_ {path=pathDst} in do
+               mapFrames tryCopyFile fs_ fsr_
+               return fsr_ 
+       else throw $ mkIOError doesNotExistErrorType "does not exists" Nothing (Just path_) 
+    where tryCopyFile a b = handle hand_ $ copyFile a b
 
--- |
+-- |Move all filesequence frames to the new path
 fileSequenceMove :: FileSequence -> FilePath -> IO FileSequence
 fileSequenceMove fs_ path_ = do
     pathSrc <- canonicalizePath $ path fs_
-    pathDst <- canonicalizePath path_
+    pathDst <- canonicalizePath path_ 
     if pathSrc == pathDst
         then return fs_
         else let fsr_ = fs_ {path=pathDst} in do
@@ -48,8 +64,8 @@ mapFrames :: (FilePath -> FilePath -> IO ()) -- function to apply
           -> FileSequence -- src frames
           -> FileSequence -- dst frames
           -> IO ()
-mapFrames func src_ dst_ = do
-  mapM_ (uncurry func) $ zip (frameList src_) (frameList dst_) 
+mapFrames func src_ dst_ = mapM_ (uncurry func) $ zip (frameList src_) (frameList dst_) 
+
 
 -- |
 --fileSequenceRename :: FileSequence -> String -> IO FileSequence

@@ -9,6 +9,7 @@ import System.Environment
 import System.Console.GetOpt
 import System.Exit
 import System.IO.Error
+import System.IO
 import Control.Exception
 import Control.Monad
 
@@ -19,6 +20,9 @@ data SeqCpOptions =
     , srcSeq        :: Maybe FileSequence
     , dstPath       :: Maybe FilePath
     , args          :: [String]
+    , resume       :: Bool
+    -- TODO : add option to copy a subset of the frames
+    -- TODO : add option to continue on error
     }
 
 -- |Returns the default options
@@ -29,7 +33,11 @@ defaultOptions =
     , srcSeq = Nothing
     , dstPath = Nothing 
     , args = []
+    , resume = False
     }
+
+seqcpErrorPrefix :: String
+seqcpErrorPrefix = "seqcp error:"
 
 -- |List of option modifiers
 options :: [OptDescr (SeqCpOptions -> SeqCpOptions)]
@@ -38,25 +46,32 @@ options =
         Option "v" ["verbose"]
             (NoArg (\opt -> opt {verbose = True}))
             "Verbose mode"
+    ,   Option "c" ["resume"]
+            (NoArg (\opt -> opt {resume = True}))
+            "Continue on error"
     ] 
 
 -- |Copy the sequence provided in the options
 copySequence :: SeqCpOptions -> IO ()
-copySequence cpOpts = do
+copySequence cpOpts = 
   case (srcSeq cpOpts, dstPath cpOpts) of
-    (Just s, Just p) -> do 
-        handle handleExceptAndExit $ void $ fileSequenceCopy s p
-        where handleExcept :: IOException -> IO ()
-              handleExcept e 
-                | isDoesNotExistError e = do 
-                    putStrLn $ "error: destination " ++ p ++ " does not exist"
-                | isPermissionError e = do
-                    putStrLn $ "error: wrong permissions on " ++ p
-                | otherwise = do
-                    print $ show e
+    (Just s, Just p) -> 
+        handle selectHandler $ void $ fileSequenceCopy s p selectHandler
+        where selectHandler | resume cpOpts = handleExceptAndResume
+                            | otherwise = handleExceptAndExit     
               handleExceptAndExit e = handleExcept e >> exitFailure
-    (_, _)  -> do putStrLn "error: missing or wrong arguments."
-                  putStrLn "usage: seqcp source_sequence.%05d.txt 1 200 /tmp/dest_dir"
+              handleExceptAndResume = handleExcept
+              handleExcept :: IOException -> IO ()
+              handleExcept e 
+                | isDoesNotExistError e || isPermissionError e = 
+                    let Just filename = ioeGetFileName e in
+                    hPutStrLn stderr $ seqcpErrorPrefix ++ " " ++ filename ++ " " ++ ioeGetErrorString e 
+                | otherwise = 
+                    -- don't know what to print in that case
+                    hPutStrLn stderr $ seqcpErrorPrefix ++ show e
+
+    (_, _)  -> do putStrLn "incorrect or missing arguments."
+                  showErrorMessage 
                   exitFailure
 
 showErrorMessage :: IO ()
@@ -73,8 +88,11 @@ processOptions optMod = readDstPath processedOptions
                 -> opt_ { srcSeq = fileSequenceFromPrintfFormat seqn (read ff :: Int) (read lf :: Int)
                         , dstPath = Just dstp 
                         }
+            [seqn, dstp]
+                -> opt_ { srcSeq = fileSequenceFromPrintfFormat seqn 0 0
+                        , dstPath = Just dstp
+                        }
             _ -> opt_
-
 
 
 main :: IO ()
