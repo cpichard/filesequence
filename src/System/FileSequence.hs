@@ -94,7 +94,7 @@ fileSequencesFromPaths :: [FilePath] -> IO [FileSequence]
 fileSequencesFromPaths paths = do
     canonicPaths <- mapM canonicalizePath (nub paths) -- O(n2)
     filesFound <- mapM directoryContents canonicPaths
-    return $ concat $ map fileSequencesFromList filesFound
+    return $ concatMap fileSequencesFromList filesFound
     where directoryContents dir = do
             files <- getDirectoryContents dir
             filterM doesFileExist $ map (combine dir) files
@@ -123,19 +123,20 @@ fileSequenceFromName :: String -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
-            -> Just  FileSequence  { firstFrame = frameNo 
-                                   , lastFrame = frameNo 
-                                   , paddingLength = deducePadding 
-                                   , path = path_
-                                   , name = fullName
-                                   , ext = ext_
-                                   , frameSep = sep1
-                                   , extSep = sep2 
-                                   } 
-                where frameNo = (read num :: Int)
+            -> Just  FileSequence  
+                        { firstFrame = frameNo 
+                        , lastFrame = frameNo 
+                        , paddingLength = deducePadding 
+                        , path = path_
+                        , name = fullName
+                        , ext = ext_
+                        , frameSep = sep1
+                        , extSep = sep2 
+                        } 
+                where frameNo = read num :: Int
                       deducePadding
                         | frameNo >= 0 = Just (length num)
-                        | frameNo <  0 = Just $ (length num) + 1
+                        | frameNo <  0 = Just $ length num + 1
                         | otherwise = Nothing -- should not happen
         _   -> Nothing
 
@@ -150,7 +151,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
           -> Just FileSequence
                     { firstFrame = min ff lf
                     , lastFrame = max ff lf
-                    , paddingLength = Just $ (read code :: Int) -- FIXME %d should be Nothing
+                    , paddingLength = Just (read code :: Int) -- FIXME %d should be Nothing
                     , path = path_
                     , name = fullName
                     , ext = ext_
@@ -181,7 +182,7 @@ frameList fs_ = map (frameName fs_) (frameRange fs_)
 padNumber :: Int -> Maybe Int -> String
 padNumber _ Nothing = "%d"
 padNumber f (Just pad_) | f >=0 = "%0" ++ show pad_ ++ "d"
-padNumber _ (Just pad_) | otherwise = "%0" ++ show (pad_+1) ++ "d"
+                        | otherwise = "%0" ++ show (pad_+1) ++ "d"
 
 -- | From Real world haskell
 getRecursiveDirs :: FilePath -> IO [FilePath]
