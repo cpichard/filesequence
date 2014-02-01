@@ -1,13 +1,17 @@
+-- |Functions to format FileSequence informations to a string, like 'ls' output.   
 module System.FileSequence.Format (
-    -- * Formating datas
+    -- * Formating options datas
       FormatingOptions
-    , formatSequenceFunction
-    , formatResult
+    -- * Formating options data modifiers
     , defaultFormatingOptions
     , setFullPath
-    , setFormatFromString
     , setLongOption
     , setMissing
+    , setFormatFromString
+    -- * Format string from FileSequence
+    , formatSequenceFunction
+    , formatResult
+    -- * Utils
     , splitNonContiguous
 ) where
 
@@ -17,18 +21,19 @@ import Data.List
 import Text.Printf
 import Data.Bits
 
+-- |Styles of sequence formating
 data SequenceFormat = Nuke | Rv | Printf
     deriving Show
 
 -- |Formating options
 data FormatingOptions = FormatingOptions
-  { sequenceFormat  :: SequenceFormat
-  , fullPath        :: Bool
-  , showStats       :: Bool
-  , showMissing     :: Bool
+  { sequenceFormat  :: SequenceFormat -- ^ Nuke, rv, printf format
+  , fullPath        :: Bool           -- ^ show the globall path
+  , showStats       :: Bool           -- ^ show additional info, permissions, etc.
+  , showMissing     :: Bool           -- ^ show missing frames
   } deriving Show
 
--- |Return the default formating options
+-- |Return the default formating options, printf and everything to false
 defaultFormatingOptions :: FormatingOptions
 defaultFormatingOptions = FormatingOptions
   { sequenceFormat = Printf
@@ -37,27 +42,27 @@ defaultFormatingOptions = FormatingOptions
   , showMissing    = False
   }
 
--- |Modify the full path flag in the formating options
+-- |Sets the full path flag in the formating options
 setFullPath :: Bool -> FormatingOptions -> FormatingOptions
 setFullPath fp opts = opts {fullPath=fp}
 
--- |Modify the show stats flag (-l) in the formating options
+-- |Sets the show stats flag (-l) in the formating options
 setLongOption :: Bool -> FormatingOptions -> FormatingOptions
 setLongOption fp opts = opts {showStats=fp}
 
--- |Modify the show missing flag in the formating options
+-- |Sets the show missing flag in the formating options
 setMissing :: Bool -> FormatingOptions -> FormatingOptions
 setMissing fp opts = opts {showMissing=fp}
 
--- |Modify the format of the output sequence
+-- |Sets the format of the output sequence
 setFormatFromString :: String -> FormatingOptions -> FormatingOptions
 setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
   where formatFromString "rv"     = Rv
         formatFromString "printf" = Printf
         formatFromString _        = Nuke
 
--- |Standard formating for command line
--- Builds a string from the filesequences infos and the formatin options
+-- |Format FileSequence and status similarly to ls
+-- Builds a string from the FileSequence infos and the formating options
 formatResult :: FormatingOptions
              -> (FileSequence, FileSequenceStatus)
              -> String
@@ -176,10 +181,10 @@ formatMissing _ fss =
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)
 
 -- |Pad a string 
-padBy :: Int    -- Pad to a multiple of this number
-    -> Char     -- Character used to pad 
-    -> String   -- String to pad
-    -> String   
+padBy :: Int    -- ^ Pad to a multiple of this number
+      -> Char   -- ^ Character used to pad 
+      -> String -- ^ String to pad
+      -> String   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
 -- |Returns partitions of contiguous frames

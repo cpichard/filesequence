@@ -1,4 +1,4 @@
--- Seqcp : copy sequences of file
+-- Seqcp : copy sequence of files
 -- 
 -- ex : seqcp toto.%05d.exr 1 3 /home/cyril/tmp
 module Main where

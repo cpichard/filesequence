@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, Rank2Types #-}
 
--- | Module FileSequenceManip. 
--- Basic sequence of file manipulation on the disk.
+-- | Module FileSequence.Manip,
+-- provides basic manipulation of file sequences on the file system.
 module System.FileSequence.Manip ( 
     fileSequenceRemove,
     fileSequenceCopy, 
@@ -28,10 +28,10 @@ fileSequenceRemove fs_ =
 -- | Copy a all files of a file sequence to a new directory
 -- Returns the newly generated filesequence
 fileSequenceCopy :: Exception e 
-                 => FileSequence 
-                 -> FilePath 
-                 -> ExceptionHandler e
-                 -> IO FileSequence
+                 => FileSequence        -- ^ FileSequence to copy 
+                 -> FilePath            -- ^ Destination directory
+                 -> ExceptionHandler e  -- ^ Exception handler 
+                 -> IO FileSequence     -- ^ Created sequence
 fileSequenceCopy fs_ path_ hand_ = do
     isDir <- doesDirectoryExist path_
     if isDir

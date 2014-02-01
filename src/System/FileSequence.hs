@@ -1,11 +1,19 @@
--- |FileSequence module can be use to manage sequence of files.
--- It has basic functionnality used in the vfx industry like handling stereo sequence.
--- Example of file sequences :
--- /home/kevin/toto_0000.obj /home/kevin/toto_0001.obj ...
--- It's supposed the sequence have no holes in it...
--- Later on, there will be a SparseFileSequence
--- NOTE : getDirectoryContents is not efficient here, try to use readDirStream from the
--- System.Posix library
+-- |This module contains several functions to create data structures that encapsulate a sequence of file. 
+-- This FileSequence data structure can be created from different kind of inputs:
+-- directory, list of files and so on.
+-- This module also contains functions to access the properties of a FileSequence, like padding, first frame, last frame. 
+-- A file sequence is a set of files sharing a common prefix
+-- and suffix. Each files is numbered, and the number is between the prefix and suffix. 
+--
+-- Here is an example of a sequence of file:
+--
+-- \/home\/kevin\/toto_0000.obj 
+--
+-- \/home\/kevin\/toto_0001.obj ...
+--
+-- \/home\/kevin\/toto_0002.obj ...
+--
+-- => \/home\/kevin\/toto_%04d.obj 0 2
 
 module System.FileSequence (
     -- * FileSequence structure
@@ -58,7 +66,7 @@ data FileSequence = FileSequence {
     , lastFrame         :: Int      -- ^ Last frame number.
     , paddingLength     :: Maybe Int-- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: FilePath -- ^ Directory of the sequence
-    , name              :: FilePath -- ^ Name of the sequence,
+    , name              :: FilePath -- ^ Name or prefix of the sequence,
     , ext               :: FilePath -- ^ Extension
     , frameSep          :: String   -- ^ Char used to separate the frame
     , extSep            :: String   -- ^ Char used to separate the extension
@@ -90,12 +98,14 @@ addFrame fs1 fs2 =
             | otherwise = Nothing
 
 -- |Find all the file sequences inside multiple paths
-fileSequencesFromPaths :: [FilePath] -> IO [FileSequence]
+fileSequencesFromPaths :: [FilePath]        -- ^ List of directories
+                       -> IO [FileSequence] -- ^ Sequences of files found
 fileSequencesFromPaths paths = do
-    canonicPaths <- mapM canonicalizePath (nub paths) -- O(n2)
+    canonicPaths <- mapM canonicalizePath (nub paths) -- FIXME nub~O(n2)
     filesFound <- mapM directoryContents canonicPaths
     return $ concatMap fileSequencesFromList filesFound
     where directoryContents dir = do
+            -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
             files <- getDirectoryContents dir
             filterM doesFileExist $ map (combine dir) files
 
@@ -187,6 +197,7 @@ padNumber f (Just pad_) | f >=0 = "%0" ++ show pad_ ++ "d"
 -- | From Real world haskell
 getRecursiveDirs :: FilePath -> IO [FilePath]
 getRecursiveDirs topdir = do
+    -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
   names <- getDirectoryContents topdir
   let properNames = filter (`notElem` [".", ".."]) names
   paths <- forM properNames $ \name_ -> do

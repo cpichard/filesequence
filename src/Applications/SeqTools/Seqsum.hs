@@ -1,3 +1,4 @@
+-- |seqsum -  compute the hash of a sequence of files
 module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Hash

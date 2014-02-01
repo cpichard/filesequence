@@ -1,3 +1,5 @@
+-- |Function to compute the hash of all files in a sequence
+
 module System.FileSequence.Hash where
 
 import qualified Data.ByteString as BS

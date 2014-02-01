@@ -1,3 +1,6 @@
+-- |Functions to extract additional informations like permissions or size from a
+-- sequence of files. Is relevant only when the sequence is on the disk, not virtual
+
 module System.FileSequence.Status where
 
 import System.FileSequence
@@ -34,7 +37,7 @@ modeFromFileStatus fs = FileSequenceMode owrp owwp owep grrp grwp grep otrp otwp
         otep = Just $ hasMode otherExecuteMode
         syml = Just $ hasMode symbolicLinkMode 
 
--- |Addition of two permission
+-- |Addition of two permissions
 sumFileSequenceMode :: FileSequenceMode -> Maybe FileSequenceMode -> FileSequenceMode
 sumFileSequenceMode a (Just b) = FileSequenceMode owrp owwp owep grrp grwp grep otrp otwp otep syml
   where hasSameMode mode_ a_ b_ = if mode_ a_ == mode_ b_ then mode_ a else Nothing

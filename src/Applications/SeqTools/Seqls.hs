@@ -1,3 +1,5 @@
+-- |seqls command.
+-- Search and display sequences found in a given path or from a list of files
 
 module Main ( main ) where
 import System.FileSequence
@@ -8,8 +10,6 @@ import System.Console.GetOpt
 import System.Directory
 import Control.Monad (liftM)
 
--- seqls command.
--- Search and display sequences found in a given path or from a list of files
 -- TODO add full status options
 -- TODO add ordering options by size, etc
 -- TODO verbose
