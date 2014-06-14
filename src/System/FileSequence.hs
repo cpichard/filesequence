@@ -40,6 +40,7 @@ import Control.Monad
 import Data.List
 import Text.Regex.PCRE
 import Text.Printf
+import System.FileSequence.SparseFrameList
 
 sepReg :: String
 sepReg = "(\\.|_)"
@@ -62,8 +63,7 @@ seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-
 -- |File sequence data structure.
 --  Stores frame range, name, views, extension, padding length
 data FileSequence = FileSequence {
-      firstFrame        :: Int      -- ^ First frame number.
-    , lastFrame         :: Int      -- ^ Last frame number.
+      frames            :: SparseFrameList
     , paddingLength     :: Maybe Int-- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: FilePath -- ^ Directory of the sequence
     , name              :: FilePath -- ^ Name or prefix of the sequence,
@@ -82,20 +82,6 @@ sameSequence fs1 fs2 =
     && ext  fs1 == ext  fs2
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
-
--- |Returns a copy of fs1 with an union of fs1 and fs2 frame ranges
--- |It basically adds frame to a sequence
-addFrame :: FileSequence -> FileSequence -> FileSequence
-addFrame fs1 fs2 = 
-    fs1 { firstFrame = firstF
-        , lastFrame = lastF
-        , paddingLength = deducePadding
-        }
-    where firstF = min (firstFrame fs1) (firstFrame fs2)
-          lastF  = max (lastFrame fs1) (lastFrame fs2)
-          deducePadding
-            | paddingLength fs1 == paddingLength fs2 = paddingLength fs1
-            | otherwise = Nothing
 
 -- |Find all the file sequences inside multiple paths
 fileSequencesFromPaths :: [FilePath]        -- ^ List of directories
@@ -125,8 +111,15 @@ fileSequencesFromList nameList = findseq nameList []
                     let (a,b) = break (sameSequence fs) found in 
                     case b of 
                         []     -> findseq xs (fs:found)
-                        (y:ys) -> findseq xs $ addFrame y fs : (a++ys)
+                        (y:ys) -> findseq xs $ mergeSequence y fs : (a++ys)
           findseq [] found = found
+          mergeSequence fs1 fs2 = 
+                fs1 { frames = addFrame (frames fs1) (firstFrame (frames fs2))
+                    , paddingLength = deducePadding fs1 fs2
+                    }
+          deducePadding fs1 fs2
+            | paddingLength fs1 == paddingLength fs2 = paddingLength fs1
+            | otherwise = Nothing
 
 -- |Return a FileSequence if the name follows the convention
 fileSequenceFromName :: String -> Maybe FileSequence
@@ -134,8 +127,7 @@ fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
             -> Just  FileSequence  
-                        { firstFrame = frameNo 
-                        , lastFrame = frameNo 
+                        { frames = addFrame [] frameNo
                         , paddingLength = deducePadding 
                         , path = path_
                         , name = fullName
@@ -159,8 +151,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
     case regResult of
       [[ _, fullName, sep1, code, sep2, ext_ ]]
           -> Just FileSequence
-                    { firstFrame = min ff lf
-                    , lastFrame = max ff lf
+                    { frames = [((min ff lf), (max ff lf))]
                     , paddingLength = Just (read code :: Int) -- FIXME %d should be Nothing
                     , path = path_
                     , name = fullName
@@ -180,7 +171,7 @@ frameName fs_ frame_ = joinPath [path fs_, name fs_ ++ frameSep fs_ ++ frameNumb
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
-frameRange fs_ = [firstFrame fs_ .. lastFrame fs_]
+frameRange fs_ = toList $ frames fs_
 
 -- |Returns the list of all frame names
 frameList :: FileSequence -> [FilePath]

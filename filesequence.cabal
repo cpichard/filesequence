@@ -8,7 +8,8 @@ Library
                     System.FileSequence.Manip,
                     System.FileSequence.Status,
                     System.FileSequence.Format,
-                    System.FileSequence.Hash
+                    System.FileSequence.Hash,
+                    System.FileSequence.SparseFrameList
   build-depends: base, regex-pcre, filepath, directory, parallel, unix, bytestring, cryptohash
   ghc-options:       -Wall -O2 -rtsopts 
   Hs-Source-Dirs: src/

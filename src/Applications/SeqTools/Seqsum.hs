@@ -3,6 +3,7 @@ module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Hash
 import System.FileSequence.Format
+import System.FileSequence.SparseFrameList
 import System.Environment
 import System.Console.GetOpt
 import System.Directory
@@ -56,7 +57,7 @@ runSeqSum opts = do
   let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
   hashes <- mapM fileSequenceSum allSequences 
   mapM_ (putStrLn.format) (zip allSequences hashes)
-  where filterMinFrame = filter (\fs -> lastFrame fs - firstFrame fs >= minFrames opts - 1)
+  where filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
         format x = formatSequenceFunction defaultFormatingOptions (fst x) ++ "  " ++ snd x
 
 splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])

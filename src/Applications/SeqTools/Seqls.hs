@@ -5,6 +5,7 @@ module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Format
 import System.FileSequence.Status
+import System.FileSequence.SparseFrameList
 import System.Environment
 import System.Console.GetOpt
 import System.Directory
@@ -108,7 +109,7 @@ showFoundSequences opts = do
   -- finally display all sequences
   mapM_ (putStrLn.format) zipped
   where format = formatResult (outputFormat opts)
-        filterMinFrame = filter (\fs -> lastFrame fs - firstFrame fs >= minFrames opts - 1)
+        filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
         contSeqs st as = concatMap (uncurry splitNonContiguous) $ zip st as
         contZipped st_ as_ = do 
                         contStatus <- mapM fileSequenceStatus (contSeqs st_ as_)

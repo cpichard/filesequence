@@ -17,6 +17,7 @@ module System.FileSequence.Format (
 
 import System.FileSequence
 import System.FileSequence.Status
+import System.FileSequence.SparseFrameList
 import Data.List
 import Text.Printf
 import Data.Bits
@@ -122,7 +123,7 @@ formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 -- |Format sequence as the output of rvls command
 formatAsRvSequence :: Bool -> FileSequence -> String
 formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
-    where formatFrame fs = show (firstFrame fs) ++ "-" ++ show (lastFrame fs) ++ fixedPadding fs
+    where formatFrame fs = show (firstFrame (frames fs)) ++ "-" ++ show (lastFrame (frames fs)) ++ fixedPadding fs
           fixedPadding fs = case paddingLength fs of
                             Just pl -> replicate pl '@'
                             Nothing -> "#"
@@ -133,7 +134,7 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 -- |Format the frame section
 formatFrameFunction :: FormatingOptions -> FileSequence -> String
 formatFrameFunction _ fss = 
-    showp (firstFrame fss) ++ " " ++ showp (lastFrame fss)
+    showp (firstFrame (frames fss)) ++ " " ++ showp (lastFrame (frames fss))
     where showp n = padBy 8 ' ' (show n)
 
 -- |Format the file size with human readable Kilo Mega and so on 
@@ -200,5 +201,5 @@ groupContiguousFrames _      = []
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
 splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ frameRange fs \\ missing fss
-    where buildSeq (ff, lf) = fs {firstFrame=ff, lastFrame=lf}
+    where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
 
