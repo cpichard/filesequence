@@ -10,12 +10,16 @@ Library
                     System.FileSequence.Format,
                     System.FileSequence.Hash,
                     System.FileSequence.SparseFrameList
-  build-depends: base, regex-pcre, filepath, directory, parallel, unix, bytestring, cryptohash
+  if os(windows)
+    build-depends: win32
+  else
+    build-depends: unix
+  build-depends: base, regex-pcre-builtin, filepath, directory, parallel, bytestring, cryptohash
   ghc-options:       -Wall -O2 -rtsopts 
   Hs-Source-Dirs: src/
 
 executable seqls
-  build-depends: base, regex-pcre, filepath, directory, filesequence
+  build-depends: base, regex-pcre-builtin, filepath, directory, filesequence
   ghc-options: -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqls.hs
