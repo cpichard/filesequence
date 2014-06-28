@@ -2,9 +2,9 @@ name:       filesequence
 version:    0.1
 build-type: Simple
 cabal-version: >= 1.8
-Build-Depends:     base >= 3 && < 5
-Library
-  Exposed-modules:  System.FileSequence,
+build-depends:     base >= 3 && < 5
+library
+  exposed-modules:  System.FileSequence,
                     System.FileSequence.Manip,
                     System.FileSequence.Status,
                     System.FileSequence.Format,
@@ -12,8 +12,13 @@ Library
                     System.FileSequence.SparseFrameList
   if os(windows)
     build-depends: win32
+    exposed-modules: System.FileSequence.Manip.Windows,
+                     System.FileSequence.Status.Windows
   else
     build-depends: unix
+    exposed-modules: System.FileSequence.Manip.Posix,
+                     System.FileSequence.Status.Posix
+
   build-depends: base, regex-pcre-builtin, filepath, directory, parallel, bytestring, cryptohash
   ghc-options:       -Wall -O2 -rtsopts 
   Hs-Source-Dirs: src/
