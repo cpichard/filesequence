@@ -1,12 +1,18 @@
+-- | Module FileSequence.SparseFrameList,
+-- Implements a simple data structure to store
+-- sparse sub-sequences in a sequence of frame
+-- ex: [(1,5), (7,10)] represents frames from 1 to 5 and 7 to 10
+-- The first naive implementation with a list of tuple
+-- seems to work just fine in terms of performances.
+ 
 module System.FileSequence.SparseFrameList where
--- |First naive implementation with a list of tuple
 type Frame = Int
 type FrameRange = (Frame, Frame)
 type SparseFrameList = [FrameRange]
 
 -- type FrameRanges
 --
--- |Add frame
+-- | Add frame
 addFrame :: SparseFrameList -> Frame -> SparseFrameList
 addFrame [] f = [(f,f)]
 addFrame ar@((minx, maxx):xs) f
@@ -36,17 +42,17 @@ isElementOf f ((a,b):xs)
 
 -- removeFrameRange
 
--- |List all the frames
+-- | List all the frames
 toList :: SparseFrameList -> [Frame]
 toList (x:xs) = [fst x .. snd x] ++ (toList xs)
 toList [] = []
 
--- |First frame 
+-- | First frame 
 firstFrame :: SparseFrameList -> Int
 firstFrame (x:_) = fst x
 firstFrame [] = 0 -- should be error ? shouldn't it ? 
 
--- |Last frame
+-- | Last frame
 lastFrame :: SparseFrameList -> Int
 lastFrame [] = 0 -- should be error ? shouldn't it ?
 lastFrame x = snd (last x)
