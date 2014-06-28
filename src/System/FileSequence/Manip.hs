@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, Rank2Types #-}
-
--- | Module FileSequence.Manip,
--- provides basic manipulation of file sequences on the file system.
+-- |Module FileSequence.Manip,
+-- provides basic file sequence manipulation on the file system.
 module System.FileSequence.Manip ( 
     fileSequenceRemove,
     fileSequenceCopy, 
@@ -17,7 +16,7 @@ import System.IO.Error
 import Control.Exception
 
 -- |Type synonym for the map frames exception handler
--- |require Rank2Types
+-- require Rank2Types
 type ExceptionHandler e = Exception e => (e -> IO ())
 
 -- |Remove all frames of the sequence
@@ -25,7 +24,7 @@ fileSequenceRemove :: FileSequence -> IO ()
 fileSequenceRemove fs_ = 
    mapM_ removeFile (frameList fs_)
 
--- | Copy a all files of a file sequence to a new directory
+-- |Copy a all files of a file sequence to a new directory
 -- Returns the newly generated filesequence
 fileSequenceCopy :: Exception e 
                  => FileSequence        -- ^ FileSequence to copy 
