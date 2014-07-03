@@ -61,3 +61,13 @@ lastFrame x = snd (last x)
 fromRange :: Int -> Int -> SparseFrameList
 fromRange ff lf = [(ff,lf)]
 
+
+-- | Returns the list of missing frames
+-- ex : holes [(1,5), (7,10), (15,20)]
+--      [(6,6), (11,14)]
+-- FIXME : check complexity
+holes :: SparseFrameList -> SparseFrameList
+holes [] = []
+holes ((a,b):xs)
+    | xs == [] = []
+    | otherwise = [(b+1, (fst (head xs))-1)] ++ holes xs
