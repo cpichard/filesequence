@@ -56,7 +56,6 @@ sumFileSequenceMode a Nothing = a
 -- | Structure to store relevant file sequence informations
 data FileSequenceStatus = FileSequenceStatus
   { perms   :: Maybe FileSequenceMode      -- ^ Different permissions found for a sequence
-  , missing :: [Int]            -- ^ List of missing frames
   , maxSize :: FileOffset       -- ^ Max size found in all the frames
   , minSize :: FileOffset       -- ^ Min size found in all the frames
   , totSize :: FileOffset       -- ^ Total size found in all the frames
@@ -65,19 +64,17 @@ data FileSequenceStatus = FileSequenceStatus
 
 -- |Construct a new file sequence status
 newFileSequenceStatus :: FileSequenceStatus
-newFileSequenceStatus = FileSequenceStatus Nothing [] minBound maxBound 0
+newFileSequenceStatus = FileSequenceStatus Nothing minBound maxBound 0
 
 -- |With the new frame of a filesequence, update the file sequence status data
 foldStatus :: FileSequence -> FileSequenceStatus -> [Int] -> IO FileSequenceStatus
 foldStatus fs fss (x:xs) = do
-  isNotMissing <- doesFileExist $ filepath x
-  if isNotMissing
-    then do
+  --isNotMissing <- doesFileExist $ filepath x
+  --if isNotMissing
+    --then do
       --status <- getSymbolicLinkStatus x
       status <- getFileStatus $ filepath x
       foldStatus fs (update_ status fss) xs
-    else
-      foldStatus fs (missing_ x fss) xs
   where filepath = frameName fs 
         update_ st_ fss_ = fss_
           { perms = Just $ sumFileSequenceMode (modeFromFileStatus st_) (perms fss_)
@@ -85,8 +82,6 @@ foldStatus fs fss (x:xs) = do
           , minSize = min (fileSize st_) (minSize fss_)
           , totSize = fileSize st_ + totSize fss_
           }
-        missing_ x_ fss_= fss_
-          { missing = x_:missing fss_}
 
 foldStatus _ fss_ [] = return fss_
 

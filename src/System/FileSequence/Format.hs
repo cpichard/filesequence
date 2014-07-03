@@ -76,7 +76,7 @@ formatResult opts =
                           $ consIf (showStats opts) (formatFrameFunction opts . fst)
                           $ consIf True (formatSequenceFunction opts . fst)
                           $ consIf showFrameBehind (formatFrameFunction opts . fst)
-                          $ consIf (showMissing opts) (formatMissing opts . snd) []
+                          $ consIf (showMissing opts) (formatMissing opts . fst) []
               spacefunc _ = "  " -- Add space between 
               consIf x y = if x then (y:) else id
               showFrameBehind = case sequenceFormat opts of
@@ -133,8 +133,8 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 
 -- |Format the frame section
 formatFrameFunction :: FormatingOptions -> FileSequence -> String
-formatFrameFunction _ fss = 
-    showp (firstFrame (frames fss)) ++ " " ++ showp (lastFrame (frames fss))
+formatFrameFunction _ fs = 
+    showp (firstFrame (frames fs)) ++ " " ++ showp (lastFrame (frames fs))
     where showp n = padBy 8 ' ' (show n)
 
 -- |Format the file size with human readable Kilo Mega and so on 
@@ -173,10 +173,10 @@ formatPermFunction _ =
                       ]
 
 -- |Format missing frames
-formatMissing :: FormatingOptions -> FileSequenceStatus -> String
-formatMissing _ fss = 
+formatMissing :: FormatingOptions -> FileSequence -> String
+formatMissing _ fs = 
     "[" ++ showFrames ++ "]"
-    where showFrames = intercalate ", " $ map tupleToString (groupContiguousFrames $ sort (missing fss))
+    where showFrames = intercalate ", " $ map tupleToString $ holes (frames fs) 
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
           tupleToString l | uncurry (==) l = show $ fst l
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)
@@ -190,16 +190,16 @@ padBy n c s = replicate (mod (- length s) n) c ++ s
 
 -- |Returns partitions of contiguous frames
 -- ex: [1,2,3,6,7,9] -> [(1,3), (6,7), (9,9]
-groupContiguousFrames :: [Int] -> [(Int, Int)]
-groupContiguousFrames (x:xs) = grpCon x x xs []
-   where grpCon fir las (x':xs') ret = if las+1 == x'
-                                        then grpCon fir x' xs' ret
-                                        else grpCon x' x' xs' (ret++[(fir, las)])      
-         grpCon fir las _ ret = ret ++ [(fir, las)]
-groupContiguousFrames _      = []  
+--groupContiguousFrames :: [Int] -> [(Int, Int)]
+--groupContiguousFrames (x:xs) = grpCon x x xs []
+--   where grpCon fir las (x':xs') ret = if las+1 == x'
+--                                        then grpCon fir x' xs' ret
+--                                        else grpCon x' x' xs' (ret++[(fir, las)])      
+--         grpCon fir las _ ret = ret ++ [(fir, las)]
+--groupContiguousFrames _      = []  
 
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
-splitNonContiguous :: FileSequenceStatus -> FileSequence -> [FileSequence]
-splitNonContiguous fss fs = map buildSeq $ groupContiguousFrames $ sort $ frameRange fs \\ missing fss
+splitNonContiguous :: FileSequence -> [FileSequence]
+splitNonContiguous fs = map buildSeq $ frames fs 
     where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
 

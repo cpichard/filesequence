@@ -104,16 +104,16 @@ showFoundSequences opts = do
   status <- mapM fileSequenceStatus allSequences
   --only contiguous sequences ? -- FIXME do this partition before
   zipped <- if contiguous opts
-              then contZipped status allSequences
+              then contZipped allSequences
               else return (zip allSequences status)
   -- finally display all sequences
   mapM_ (putStrLn.format) zipped
   where format = formatResult (outputFormat opts)
         filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
-        contSeqs st as = concatMap (uncurry splitNonContiguous) $ zip st as
-        contZipped st_ as_ = do 
-                        contStatus <- mapM fileSequenceStatus (contSeqs st_ as_)
-                        return $ zip (contSeqs st_ as_) contStatus
+        contSeqs = concatMap splitNonContiguous 
+        contZipped as_ = do 
+                contStatus <- mapM fileSequenceStatus (contSeqs as_)
+                return $ zip (contSeqs as_) contStatus
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
