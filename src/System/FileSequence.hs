@@ -46,7 +46,7 @@ sepReg :: String
 sepReg = "(\\.|_)"
 
 frameSepReg :: String
-frameSepReg = sepReg
+frameSepReg = sepReg++"?"
 
 extSepReg :: String
 extSepReg = "(\\.)"
