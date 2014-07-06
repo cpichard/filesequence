@@ -70,7 +70,7 @@ data FileSequence = FileSequence {
     , ext               :: FilePath -- ^ Extension
     , frameSep          :: String   -- ^ Char used to separate the frame
     , extSep            :: String   -- ^ Char used to separate the extension
-    } deriving Show
+    } deriving (Show, Eq)
 
 -- |Returns true if two sequences have the same signature.
 -- |Two filesequences have the same signature if
