@@ -136,7 +136,9 @@ fileSequenceFromName name_ =
                         , extSep = sep2 
                         } 
                 where frameNo = read num :: Int
-                      deducePadding = Just (length num)
+                      deducePadding
+                            | frameNo >= 0 = Just (length num)
+                            | otherwise = Just $ length num - 1
         _   -> Nothing
 
     where (path_, filename) = splitFileName name_

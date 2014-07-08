@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -F -pgmF htfpp #-}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# OPTIONS_GHC -F -pgmF htfpp #-}
 
 module Main where
 import System.FileSequence
@@ -31,7 +31,7 @@ test_negativeFrames =
     where b = fileSequencesFromList ["test.-0004.dpx", "test.-0003.dpx"]
           a =[FileSequence 
                 { frames = [(-4,-3)]
-                , paddingLength = Just 5 
+                , paddingLength = Just 4 
                 , path = "./"
                 , name = "test"
                 , ext = "dpx"
