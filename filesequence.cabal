@@ -2,9 +2,9 @@ name:       filesequence
 version:    0.1
 build-type: Simple
 cabal-version: >= 1.8
-Build-Depends:     base >= 3 && < 5
+build-depends:     base >= 3 && < 5
 Library
-  Exposed-modules:  System.FileSequence,
+  exposed-modules:  System.FileSequence,
                     System.FileSequence.Manip,
                     System.FileSequence.Status,
                     System.FileSequence.Format,
@@ -12,7 +12,7 @@ Library
                     System.FileSequence.SparseFrameList
   build-depends: base, regex-pcre, filepath, directory, parallel, unix, bytestring, cryptohash
   ghc-options:       -Wall -O2 -rtsopts 
-  Hs-Source-Dirs: src/
+  hs-source-dirs: src/
 
 executable seqls
   build-depends: base, regex-pcre, filepath, directory, filesequence
@@ -33,9 +33,14 @@ executable seqcp
   main-is:  Seqcp.hs
 
 test-suite FileSequenceTests
+  build-depends:        base >= 4 && < 5, HTF, filesequence
+  ghc-options:          -O2 -Wall
   hs-source-dirs:       tests
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-  build-depends:        base >= 4 && < 5, HTF, filesequence
-  ghc-options:          -O2 -Wall
 
+benchmark bench-builder-all
+  build-depends:    base, deepseq, filesequence, random, criterion 
+  hs-source-dirs:   bench
+  main-is:          Benchmarks.hs
+  type:             exitcode-stdio-1.0
