@@ -52,6 +52,22 @@ test_sequenceWithoutName =
                     , frameSep = ""
                     , extSep = "."})
 
+-- | Test utf8 characters
+test_utf8 :: IO ()
+test_utf8 =
+  do assertEqual a b
+    where b = fileSequenceFromName "fffèè.0003.fg"
+          a = Just (FileSequence 
+                    { frames = [(3,3)]
+                    , paddingLength = Just 4
+                    , path = "./"
+                    , name = "fffèè"
+                    , ext = "fg"
+                    , frameSep = "."
+                    , extSep = "."})
+
+
+
 -- | Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool
 prop_sparseFrameList frm = 
