@@ -39,9 +39,10 @@ import System.FilePath
 import Control.Monad
 import Data.List
 import Text.Regex.PCRE
+import Text.Regex.PCRE.ByteString
 import Text.Printf
 import System.FileSequence.SparseFrameList
-
+import Data.ByteString.UTF8 (fromString, toString, ByteString)
 sepReg :: String
 sepReg = "(\\.|_)"
 
@@ -130,19 +131,19 @@ fileSequenceFromName name_ =
                         { frames = addFrame [] frameNo
                         , paddingLength = deducePadding 
                         , path = path_
-                        , name = fullName
-                        , ext = ext_
-                        , frameSep = sep1
-                        , extSep = sep2 
+                        , name = toString fullName
+                        , ext = toString ext_
+                        , frameSep = toString sep1
+                        , extSep = toString sep2 
                         } 
-                where frameNo = read num :: Int
+                where frameNo = read (toString num) :: Int
                       deducePadding
-                            | frameNo >= 0 = Just (length num)
-                            | otherwise = Just $ length num - 1
+                            | frameNo >= 0 = Just (length (toString num))
+                            | otherwise = Just $ length (toString num) - 1
         _   -> Nothing
 
     where (path_, filename) = splitFileName name_
-          regResult = filename =~ fileInSeq :: [[String]]
+          regResult = (fromString filename) =~ (fromString fileInSeq) :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
 fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence

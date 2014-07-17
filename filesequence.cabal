@@ -10,7 +10,7 @@ Library
                     System.FileSequence.Format,
                     System.FileSequence.Hash,
                     System.FileSequence.SparseFrameList
-  build-depends: base, regex-pcre-builtin, filepath, directory, parallel, unix, bytestring, cryptohash
+  build-depends: base, utf8-string, regex-pcre-builtin, filepath, directory, parallel, unix, bytestring, cryptohash
   ghc-options:       -Wall -O2 -rtsopts 
   hs-source-dirs: src/
 
