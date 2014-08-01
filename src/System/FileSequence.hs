@@ -170,13 +170,12 @@ frameName :: FileSequence -> Int -> FilePath
 frameName fs_ frame_ = joinPath [path fs_, name fs_ ++ frameSep fs_ ++ frameNumber ++ extSep fs_ ++ ext fs_]
     where frameNumber | paddingLength fs_ == Nothing = show frame_
                       | otherwise = negStr ++ (replicate nZeros '0') ++ number
-          number = show frame_
+          number = show $ abs frame_
           negStr = if frame_ < 0
                      then "-"
                      else ""
-          nZeros = fromJust (paddingLength fs_) - length number - length negStr
+          nZeros = max (fromJust (paddingLength fs_) - length number) 0
         
-
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
