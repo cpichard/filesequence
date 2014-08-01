@@ -39,10 +39,11 @@ import System.FilePath
 import Control.Monad
 import Data.List
 import Text.Regex.PCRE
-import Text.Regex.PCRE.ByteString
-import Text.Printf
 import System.FileSequence.SparseFrameList
 import Data.ByteString.UTF8 (fromString, toString, ByteString)
+import Data.Maybe (fromJust)
+
+
 sepReg :: String
 sepReg = "(\\.|_)"
 
@@ -167,7 +168,15 @@ fileSequenceFromPrintfFormat name_ ff lf =
 -- |Returns the filename of the frame number
 frameName :: FileSequence -> Int -> FilePath
 frameName fs_ frame_ = joinPath [path fs_, name fs_ ++ frameSep fs_ ++ frameNumber ++ extSep fs_ ++ ext fs_]
-    where frameNumber = printf (padNumber frame_ (paddingLength fs_)) frame_
+    where frameNumber | paddingLength fs_ == Nothing = show frame_
+                      | otherwise = negStr ++ (replicate nZeros '0') ++ number
+          number = show frame_
+          negStr = if frame_ < 0
+                     then "-"
+                     else ""
+          nZeros = fromJust (paddingLength fs_) - length number - length negStr
+        
+
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
@@ -176,14 +185,6 @@ frameRange fs_ = toList $ frames fs_
 -- |Returns the list of all frame names
 frameList :: FileSequence -> [FilePath]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
-
--- |Returns the string of the printf format for padded string
---  account for negative frames
---  TODO : move to frameName as it is only used there now
-padNumber :: Int -> Maybe Int -> String
-padNumber _ Nothing = "%d"
-padNumber f (Just pad_) | f >=0 = "%0" ++ show pad_ ++ "d"
-                        | otherwise = "%0" ++ show (pad_+1) ++ "d"
 
 -- | From Real world haskell
 getRecursiveDirs :: FilePath -> IO [FilePath]
