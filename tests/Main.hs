@@ -1,5 +1,5 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module Main where
 import System.FileSequence
@@ -66,7 +66,18 @@ test_utf8 =
                     , frameSep = "."
                     , extSep = "."})
 
-
+test_padding :: IO ()
+test_padding =
+  do assertEqual a b
+    where b = fileSequencesFromList [ "fff.99.dg", "fff.100.dg" ]
+          a = [FileSequence
+                { frames = [(99,100)]
+                , paddingLength = Nothing
+                , path = "./"
+                , name = "fff"
+                , ext = "dg"
+                , frameSep = "."
+                , extSep = "."}]
 
 -- | Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool
