@@ -6,8 +6,9 @@ import System.FileSequence.Format
 import System.FileSequence.SparseFrameList
 import System.Environment
 import System.Console.GetOpt
-import System.Directory
+--import System.Directory
 import Control.Monad (liftM)
+import Data.ByteString.UTF8 (fromString)
 
 data SeqSumData = SeqSumData
     { pathList        :: [String]
@@ -46,7 +47,7 @@ processOptions optFunc = addDirectoryList processedOptions
 
 runSeqSum :: SeqSumData -> IO ()
 runSeqSum opts = do
-  (directories, files) <- splitPaths (pathList opts)
+  (directories, files) <- splitPaths $ map fromString (pathList opts)
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)
@@ -60,15 +61,6 @@ runSeqSum opts = do
   where filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
         format x = formatSequenceFunction defaultFormatingOptions (fst x) ++ "  " ++ snd x
 
-splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
-splitPaths []     = return ([],[])
-splitPaths (x:xs) = do
-  de <- doesDirectoryExist x
-  fe <- doesFileExist x
-  (yd, yf) <- splitPaths xs
-  return (conc de x yd, conc fe x yf)
-  where conc True x' xs' = x':xs'
-        conc False _ xs' = xs'
 -- seqsum command
 showErrorMessage :: IO ()
 showErrorMessage =

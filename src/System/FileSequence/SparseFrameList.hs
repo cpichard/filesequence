@@ -1,6 +1,6 @@
 -- | Module FileSequence.SparseFrameList,
 -- Implements a simple data structure to store
--- sparse sub-sequences in a sequence of frame
+-- sparse sub-sequences of a sequence of frame
 -- ex: [(1,5), (7,10)] represents frames from 1 to 5 and 7 to 10
 -- The first naive implementation with a list of tuple
 -- seems to work just fine in terms of performances.

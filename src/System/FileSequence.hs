@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- |This module contains several functions to create data structures that encapsulate a sequence of file. 
 -- This FileSequence data structure can be created from different kind of inputs:
 -- directory, list of files and so on.
@@ -25,41 +26,51 @@ module System.FileSequence (
     -- ** From names
     fileSequencesFromList,
     fileSequenceFromName,
-    fileSequenceFromPrintfFormat,
+    --fileSequenceFromPrintfFormat,
     -- * Accessors
     frameName,
     frameRange,
     frameList,
     -- * Utils
     getRecursiveDirs,
+
+    PathString,
+    splitPaths,
 ) where
 
-import System.Directory
-import System.FilePath
+--import System.Directory
+import System.Posix.FilePath
+import System.Posix.Directory.Traversals
+import System.Posix.Files.ByteString
 import Control.Monad
-import Data.List
+--import Data.List
 import Text.Regex.PCRE
+--import Text.Regex.PCRE.ByteString
 import System.FileSequence.SparseFrameList
-import Data.ByteString.UTF8 (fromString, toString, ByteString)
+--import qualified Data.ByteString as BS
+import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (fromJust)
+import System.FileSequence.Internal        
+--import System.Posix.Directory.Traversals
+import Data.ByteString.Internal
+--import Data.String
 
-
-sepReg :: String
+sepReg :: PathString
 sepReg = "(\\.|_)"
 
-frameSepReg :: String
-frameSepReg = sepReg++"?"
+frameSepReg :: PathString
+frameSepReg = concatPathString [sepReg, "?"]
 
-extSepReg :: String
+extSepReg :: PathString
 extSepReg = "(\\.)"
 
 -- * Regex used to find sequences
-fileInSeq :: String
-fileInSeq = "(.*?)" ++ frameSepReg ++ "(-?[0-9]+)"++ extSepReg ++ "([a-zA-Z0-9]+)$"
+fileInSeq :: PathString
+fileInSeq = concatPathString ["(.*?)", frameSepReg, "(-?[0-9]+)", extSepReg, "([a-zA-Z0-9]+)$"]
 
 -- * Sequence in printf format
-seqInPrintf :: String
-seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-9]+)$"
+--seqInPrintf :: String
+--seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-9]+)$"
 
 -- * Datatype
 -- |File sequence data structure.
@@ -67,11 +78,11 @@ seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-
 data FileSequence = FileSequence {
       frames            :: SparseFrameList
     , paddingLength     :: Maybe Int-- ^ Padding = number of digit for a frame ex: 00012 -> 5
-    , path              :: FilePath -- ^ Directory of the sequence
-    , name              :: FilePath -- ^ Name or prefix of the sequence,
-    , ext               :: FilePath -- ^ Extension
-    , frameSep          :: String   -- ^ Char used to separate the frame
-    , extSep            :: String   -- ^ Char used to separate the extension
+    , path              :: PathString -- ^ Directory of the sequence
+    , name              :: PathString -- ^ Name or prefix of the sequence,
+    , ext               :: PathString -- ^ Extension
+    , frameSep          :: PathString   -- ^ Char used to separate the frame
+    , extSep            :: PathString   -- ^ Char used to separate the extension
     } deriving (Show, Eq)
 
 -- |Returns true if two sequences have the same signature.
@@ -86,25 +97,27 @@ sameSequence fs1 fs2 =
     && extSep fs1 == extSep fs2
 
 -- |Find all the file sequences inside multiple paths
-fileSequencesFromPaths :: [FilePath]        -- ^ List of directories
+fileSequencesFromPaths :: [PathString]        -- ^ List of directories
                        -> IO [FileSequence] -- ^ Sequences of files found
 fileSequencesFromPaths paths = do
-    canonicPaths <- mapM canonicalizePath (nub paths) -- FIXME nub~O(n2)
-    filesFound <- mapM directoryContents canonicPaths
+    --  FIXME use realPath
+    --  canonicPaths <- mapM canonicalizePath paths 
+    -- filesFound <- mapM directoryContents canonicPaths
+    filesFound <- mapM directoryContents paths
     return $ concatMap fileSequencesFromList filesFound
     where directoryContents dir = do
             -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
             files <- getDirectoryContents dir
-            filterM doesFileExist $ map (combine dir) files
+            filterM fileExist $ map ((combine dir).snd) files
 
 -- |Find the sequences from a list of files on the disk
-fileSequencesFromFiles :: [FilePath] -> IO [FileSequence]
+fileSequencesFromFiles :: [PathString] -> IO [FileSequence]
 fileSequencesFromFiles files = do
-  existingFiles <- filterM doesFileExist files
+  existingFiles <- filterM fileExist files
   return $ fileSequencesFromList existingFiles
 
 -- |Returns the file sequences of a list of names
-fileSequencesFromList :: [String] -> [FileSequence]
+fileSequencesFromList :: [PathString] -> [FileSequence]
 fileSequencesFromList nameList = findseq nameList []
     where findseq (x:xs) found =
             case fileSequenceFromName x of
@@ -124,7 +137,7 @@ fileSequencesFromList nameList = findseq nameList []
             | otherwise = Nothing
 
 -- |Return a FileSequence if the name follows the convention
-fileSequenceFromName :: String -> Maybe FileSequence
+fileSequenceFromName :: PathString -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
         [[ _ , fullName, sep1, num, sep2, ext_ ]]
@@ -132,10 +145,10 @@ fileSequenceFromName name_ =
                         { frames = addFrame [] frameNo
                         , paddingLength = deducePadding 
                         , path = path_
-                        , name = toString fullName
-                        , ext = toString ext_
-                        , frameSep = toString sep1
-                        , extSep = toString sep2 
+                        , name = fullName
+                        , ext = ext_
+                        , frameSep = sep1
+                        , extSep = sep2 
                         } 
                 where frameNo = read (toString num) :: Int
                       deducePadding
@@ -144,58 +157,70 @@ fileSequenceFromName name_ =
         _   -> Nothing
 
     where (path_, filename) = splitFileName name_
-          regResult = (fromString filename) =~ (fromString fileInSeq) :: [[ByteString]]
+          regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
-fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence
-fileSequenceFromPrintfFormat name_ ff lf = 
-    case regResult of
-      [[ _, fullName, sep1, code, sep2, ext_ ]]
-          -> Just FileSequence
-                    { frames = [((min ff lf), (max ff lf))]
-                    , paddingLength = Just (read code :: Int) -- FIXME %d should be Nothing
-                    , path = path_
-                    , name = fullName
-                    , ext = ext_
-                    , frameSep = sep1
-                    , extSep = sep2
-                    }
-      _ -> Nothing
-
-    where (path_, filename) = splitFileName name_
-          regResult = filename =~ seqInPrintf :: [[String]]
+--fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence
+--fileSequenceFromPrintfFormat name_ ff lf = 
+--    case regResult of
+--      [[ _, fullName, sep1, code, sep2, ext_ ]]
+--          -> Just FileSequence
+--                    { frames = [((min ff lf), (max ff lf))]
+--                    , paddingLength = Just (read code :: Int) -- FIXME %d should be Nothing
+--                    , path = path_
+--                    , name = fullName
+--                    , ext = ext_
+--                    , frameSep = sep1
+--                    , extSep = sep2
+--                    }
+--      _ -> Nothing
+--
+--    where (path_, filename) = splitFileName name_
+--          regResult = (toString filename) =~ seqInPrintf :: [[String]]
 
 -- |Returns the filename of the frame number
-frameName :: FileSequence -> Int -> FilePath
-frameName fs_ frame_ = joinPath [path fs_, name fs_ ++ frameSep fs_ ++ frameNumber ++ extSep fs_ ++ ext fs_]
+frameName :: FileSequence -> Int -> PathString
+frameName fs_ frame_ = joinPath [path fs_, 
+        concatPathString [name fs_, frameSep fs_, fromString frameNumber, extSep fs_, ext fs_]]
+    -- where frameNumber = printf (padNumber frame_ (paddingLength fs_)) frame_
     where frameNumber | paddingLength fs_ == Nothing = show frame_
                       | otherwise = negStr ++ (replicate nZeros '0') ++ number
-          number = show $ abs frame_
+          number = show frame_
           negStr = if frame_ < 0
                      then "-"
                      else ""
-          nZeros = max (fromJust (paddingLength fs_) - length number) 0
-        
+          nZeros = fromJust (paddingLength fs_) - length number - length negStr
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
 frameRange fs_ = toList $ frames fs_
 
 -- |Returns the list of all frame names
-frameList :: FileSequence -> [FilePath]
+frameList :: FileSequence -> [PathString]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
 -- | From Real world haskell
-getRecursiveDirs :: FilePath -> IO [FilePath]
+getRecursiveDirs :: PathString -> IO [PathString]
 getRecursiveDirs topdir = do
-    -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
-  names <- getDirectoryContents topdir
-  let properNames = filter (`notElem` [".", ".."]) names
-  paths <- forM properNames $ \name_ -> do
+--    -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
+  namesAndTypes <- getDirectoryContents topdir
+  let properNames = filter ((`notElem` [".", ".."]).snd) namesAndTypes
+  paths <- forM properNames $ \(_,name_) -> do
     let path_ = topdir </> name_
-    isDirectory <- doesDirectoryExist path_
-    if isDirectory
+    isDir <- isRawDir path_
+    if isDir
       then getRecursiveDirs path_
       else return []
-  return $ topdir:concat paths
+  return $ topdir: concat paths
 
+-- |Split directories from files
+splitPaths :: [PathString] -> IO ([PathString], [PathString])
+splitPaths []     = return ([],[])
+splitPaths (x:xs) = do
+  -- isDir <- isDirectory <$> getFileStatus path
+  de <- isRawDir x
+  --fe <- isRawDir x
+  (yd, yf) <- splitPaths xs
+  return (conc de x yd, conc (not de) x yf)
+  where conc True x' xs' = x':xs'
+        conc False _ xs' = xs'

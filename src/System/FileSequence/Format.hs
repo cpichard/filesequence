@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- |Functions to format FileSequence informations to a string, like 'ls' output.   
 module System.FileSequence.Format (
     -- * Formating options datas
@@ -16,11 +17,14 @@ module System.FileSequence.Format (
 ) where
 
 import System.FileSequence
+import System.FileSequence.Internal
 import System.FileSequence.Status
 import System.FileSequence.SparseFrameList
 import Data.List
 import Text.Printf
 import Data.Bits
+import Data.String
+
 
 -- |Styles of sequence formating
 data SequenceFormat = Nuke | Rv | Printf
@@ -66,7 +70,7 @@ setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
 -- Builds a string from the FileSequence infos and the formating options
 formatResult :: FormatingOptions
              -> (FileSequence, FileSequenceStatus)
-             -> String
+             -> ConsoleString
 formatResult opts =
     \fs -> concatMap ($ fs) layoutFuncs
         where layoutFuncs = intersperse spacefunc showFuncs
@@ -85,60 +89,60 @@ formatResult opts =
                                    
 
 -- |Returns the formating function associated to the formating options
-formatSequenceFunction :: FormatingOptions -> FileSequence -> String
+formatSequenceFunction :: FormatingOptions -> FileSequence -> ConsoleString
 formatSequenceFunction opts =
    case sequenceFormat opts of
-     Rv     -> formatAsRvSequence     (fullPath opts)
-     Printf -> formatAsPrintfSequence (fullPath opts)
-     _      -> formatAsNukeSequence   (fullPath opts)
+     Rv     -> pathToConsole . formatAsRvSequence     (fullPath opts)
+     Printf -> pathToConsole . formatAsPrintfSequence (fullPath opts)
+     _      -> pathToConsole . formatAsNukeSequence   (fullPath opts)
 
 -- |Format, reconstruct the sequence name
 formatSequence :: FileSequence
-               -> (FileSequence -> String)
-               -> (FileSequence -> String)
-               -> String
+               -> (FileSequence -> PathString)
+               -> (FileSequence -> PathString)
+               -> PathString
 formatSequence fs_ path_ padding_ =
-    path_ fs_ ++ name fs_ ++ frameSep fs_ ++ padding_ fs_ ++ extSep fs_ ++ ext fs_
+    concatPathString [path_ fs_, name fs_, frameSep fs_, padding_ fs_, extSep fs_, ext fs_]
 
 -- |Format the structure in a string readable by nuke
-formatAsNukeSequence :: Bool -> FileSequence -> String
+formatAsNukeSequence :: Bool -> FileSequence -> PathString
 formatAsNukeSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
     where formatFrame fs = case paddingLength fs of
-                            Just pl -> replicate pl '#'
+                            Just pl -> fromString $ replicate pl '#'
                             Nothing -> "#"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
 
 -- |Format the filesequence as a printf compatible string
-formatAsPrintfSequence :: Bool -> FileSequence -> String
+formatAsPrintfSequence :: Bool -> FileSequence -> PathString
 formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
     where formatFrame fs = case paddingLength fs of 
-                             Just pl -> "%0" ++ show pl ++ "d"
+                             Just pl -> fromString $ "%0" ++ show pl ++ "d"
                              Nothing -> "%d"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
 
 -- |Format sequence as the output of rvls command
-formatAsRvSequence :: Bool -> FileSequence -> String
+formatAsRvSequence :: Bool -> FileSequence -> PathString
 formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
-    where formatFrame fs = show (firstFrame (frames fs)) ++ "-" ++ show (lastFrame (frames fs)) ++ fixedPadding fs
+    where formatFrame fs = fromString $ show (firstFrame (frames fs)) ++ "-" ++ show (lastFrame (frames fs)) ++ fixedPadding fs
           fixedPadding fs = case paddingLength fs of
-                            Just pl -> replicate pl '@'
+                            Just pl -> fromString $ replicate pl '@'
                             Nothing -> "#"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
 
 -- |Format the frame section
-formatFrameFunction :: FormatingOptions -> FileSequence -> String
+formatFrameFunction :: FormatingOptions -> FileSequence -> ConsoleString
 formatFrameFunction _ fs = 
     showp (firstFrame (frames fs)) ++ " " ++ showp (lastFrame (frames fs))
     where showp n = padBy 8 ' ' (show n)
 
 -- |Format the file size with human readable Kilo Mega and so on 
-formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> String
+formatSizesFunction :: FormatingOptions -> FileSequenceStatus -> ConsoleString
 formatSizesFunction _ fss =
     showra (minSize fss) ++ "  " ++ showra (maxSize fss) ++ "  " ++ showra (totSize fss)
     where showra s 
@@ -151,7 +155,7 @@ formatSizesFunction _ fss =
 
 -- |Format the file permissions
 -- Change the permission to "?" when multiple files have different permissions 
-formatPermFunction :: FormatingOptions -> FileSequenceStatus -> String
+formatPermFunction :: FormatingOptions -> FileSequenceStatus -> ConsoleString
 formatPermFunction _ =
     \fss -> concatMap ($(perms fss)) showFuncs
     where showPerm _  _ Nothing       = "?"
@@ -173,7 +177,7 @@ formatPermFunction _ =
                       ]
 
 -- |Format missing frames
-formatMissing :: FormatingOptions -> FileSequence -> String
+formatMissing :: FormatingOptions -> FileSequence -> ConsoleString
 formatMissing _ fs = 
     "[" ++ showFrames ++ "]"
     where showFrames = intercalate ", " $ map tupleToString $ holes (frames fs) 
@@ -185,7 +189,7 @@ formatMissing _ fs =
 padBy :: Int    -- ^ Pad to a multiple of this number
       -> Char   -- ^ Character used to pad 
       -> String -- ^ String to pad
-      -> String   
+      -> ConsoleString   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
 -- |Returns partitions of contiguous frames

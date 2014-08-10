@@ -10,7 +10,7 @@ import System.Environment
 import System.Console.GetOpt
 import System.Directory
 import Control.Monad (liftM)
-
+import Data.ByteString.UTF8 (fromString, toString)
 -- TODO add full status options
 -- TODO add ordering options by size, etc
 -- TODO verbose
@@ -62,16 +62,6 @@ options =
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
--- |Split directories from files
-splitPaths :: [FilePath] -> IO ([FilePath], [FilePath])
-splitPaths []     = return ([],[])
-splitPaths (x:xs) = do
-  de <- doesDirectoryExist x
-  fe <- doesFileExist x
-  (yd, yf) <- splitPaths xs
-  return (conc de x yd, conc fe x yf)
-  where conc True x' xs' = x':xs'
-        conc False _ xs' = xs'
 
 -- |Process the options modifiers
 processOptions :: [SeqLsData -> SeqLsData] -> [String] -> SeqLsData
@@ -86,7 +76,7 @@ processOptions optFunc = addDirectoryList processedOptions
 showFoundSequences :: SeqLsData -> IO ()
 showFoundSequences opts = do
   -- partition directories and files
-  (directories, files) <- splitPaths (pathList opts)
+  (directories, files) <- splitPaths $ map fromString (pathList opts)
   
   -- recursive mode ?
   alldirs <-

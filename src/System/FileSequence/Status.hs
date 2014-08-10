@@ -4,9 +4,12 @@
 module System.FileSequence.Status where
 
 import System.FileSequence
-import System.Posix.Files
+--import System.Posix.Directory.Traversals
+--import System.Posix.FilePath
+--import System.Posix.Files
+import System.Posix.Files.ByteString
+--import System.Posix.IO.ByteString
 import System.Posix.Types
-import System.Directory
 
 -- | A file permission
 data FileSequenceMode = FileSequenceMode
