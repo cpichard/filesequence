@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveDataTypeable, Rank2Types #-}
 -- |Module FileSequence.Manip,
+{-# LANGUAGE Rank2Types #-}
+ -- {-# LANGUAGE DeriveDataTypeable #-}
 -- provides basic file sequence manipulation on the file system.
 module System.FileSequence.Manip ( 
     fileSequenceRemove,

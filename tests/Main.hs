@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -F -pgmF htfpp #-}
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances #-}
+{-# OPTIONS_GHC -F -pgmF htfpp #-}
 
 module Main where
 import System.FileSequence
@@ -7,32 +7,25 @@ import System.FileSequence.SparseFrameList
 import Data.List (nub, sort)
 import Test.Framework
 
+-- | Check that the padding is not less than the max number of digits in all frames
+--paddingIsCoherent :: FileSequence -> Bool
+--paddingIsCoherent fs = 
+--  case paddingLength fs of
+--     Nothing -> True -- differs countDigits
+--     Just p -> True -- maximum countDigits >= p
+--  where countDigits = map (length.show.abs) (frameRange fs)
+--        differs (x:xs) = not $ all (==x) xs
+--        differs [] = False
 
--- | Arbitrary FileSequence generator
-instance Arbitrary FileSequence where
-   arbitrary = do
-     frames_ <- listOf1 arbitrary :: Gen [Int]
-     Positive len_ <- arbitrary
-     plen_ <- elements [Nothing, Just len_]
-     frameSep_ <- elements ["", ".", "_"]
-     return $ FileSequence
-                { frames = foldl addFrame [] frames_ 
-                , paddingLength = plen_ 
-                , path = "./" --  FIXME : arbitrary for file path
-                , name = "test" -- FIXME : arbitrary for names
-                , ext = "dpx" -- same as above
-                , frameSep = frameSep_
-                , extSep = "."} 
 
 -- | Negative frames quick test
 test_negativeFrames :: IO ()
-test_negativeFrames = 
-  do assertEqual a b
+test_negativeFrames = assertEqual a b
     where b = fileSequencesFromList ["test.-0004.dpx", "test.-0003.dpx"]
           a =[FileSequence 
                 { frames = [(-4,-3)]
                 , paddingLength = Just 4 
-                , path = "./"
+                , path = ""
                 , name = "test"
                 , ext = "dpx"
                 , frameSep = "."
@@ -40,44 +33,30 @@ test_negativeFrames =
 
 -- | Sequence with no name, only numbers
 test_sequenceWithoutName :: IO ()
-test_sequenceWithoutName = 
-  do assertEqual a b 
+test_sequenceWithoutName = assertEqual a b 
     where b = fileSequenceFromName "0005.dpx"
-          a = Just (FileSequence 
+          a = Just FileSequence 
                     { frames = [(5,5)]
                     , paddingLength = Just 4
-                    , path = "./"
+                    , path = ""
                     , name = ""
                     , ext = "dpx"
                     , frameSep = ""
-                    , extSep = "."})
+                    , extSep = "."}
 
 -- | Test utf8 characters
 test_utf8 :: IO ()
-test_utf8 =
-  do assertEqual a b
+test_utf8 = assertEqual a b
     where b = fileSequenceFromName "fffèè.0003.fg"
-          a = Just (FileSequence 
+          a = Just FileSequence 
                     { frames = [(3,3)]
                     , paddingLength = Just 4
-                    , path = "./"
+                    , path = ""
                     , name = "fffèè"
                     , ext = "fg"
                     , frameSep = "."
-                    , extSep = "."})
+                    , extSep = "."}
 
-test_padding :: IO ()
-test_padding =
-  do assertEqual a b
-    where b = fileSequencesFromList [ "fff.99.dg", "fff.100.dg" ]
-          a = [FileSequence
-                { frames = [(99,100)]
-                , paddingLength = Nothing
-                , path = "./"
-                , name = "fff"
-                , ext = "dg"
-                , frameSep = "."
-                , extSep = "."}]
 
 -- | Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool
@@ -97,8 +76,15 @@ prop_FrameRange fs = all sup sfl
 -- => A == B 
 -- Also enforce that the list of file is not empty
 prop_frameConsistency :: FileSequence -> Bool
-prop_frameConsistency fs =  sort (frameList fs) == sort (frameList (head newfss))
-  where newfss = fileSequencesFromList (frameList fs)
+prop_frameConsistency fs =  sort (frameList fs) == sort (frameList newfss)
+  where newfss = head $ fileSequencesFromList (frameList fs)
+
+-- | FIXME Test filesequence equality here 
+prop_bijectiveFunc :: FileSequence -> Bool
+prop_bijectiveFunc fs =  sort (frameList fs1) == sort (frameList fs2)
+  where fs1 = head $ fileSequencesFromList (frameList fs)
+        fs2 = head $ fileSequencesFromList (frameList fs1)
+
 
 main ::IO ()
 main = htfMain htf_thisModulesTests

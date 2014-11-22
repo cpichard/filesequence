@@ -54,6 +54,9 @@ import System.FileSequence.Internal
 --import System.Posix.Directory.Traversals
 import Data.ByteString.Internal
 --import Data.String
+import Data.Maybe (isNothing)
+import Test.QuickCheck
+import qualified Data.ByteString.Char8 as BC
 
 sepReg :: PathString
 sepReg = "(\\.|_)"
@@ -77,12 +80,12 @@ fileInSeq = concatPathString ["(.*?)", frameSepReg, "(-?[0-9]+)", extSepReg, "([
 --  Stores frame range, name, views, extension, padding length
 data FileSequence = FileSequence {
       frames            :: SparseFrameList
-    , paddingLength     :: Maybe Int-- ^ Padding = number of digit for a frame ex: 00012 -> 5
+    , paddingLength     :: Maybe Int  -- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: PathString -- ^ Directory of the sequence
     , name              :: PathString -- ^ Name or prefix of the sequence,
     , ext               :: PathString -- ^ Extension
-    , frameSep          :: PathString   -- ^ Char used to separate the frame
-    , extSep            :: PathString   -- ^ Char used to separate the extension
+    , frameSep          :: PathString -- ^ Char used to isolate the frame from the name
+    , extSep            :: PathString -- ^ Char used to separate the extension
     } deriving (Show, Eq)
 
 -- |Returns true if two sequences have the same signature.
@@ -108,7 +111,7 @@ fileSequencesFromPaths paths = do
     where directoryContents dir = do
             -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
             files <- getDirectoryContents dir
-            filterM fileExist $ map ((combine dir).snd) files
+            filterM fileExist $ map (combine dir.snd) files
 
 -- |Find the sequences from a list of files on the disk
 fileSequencesFromFiles :: [PathString] -> IO [FileSequence]
@@ -156,7 +159,7 @@ fileSequenceFromName name_ =
                             | otherwise = Just $ length (toString num) - 1
         _   -> Nothing
 
-    where (path_, filename) = splitFileName name_
+    where (path_, filename) = splitFSName name_
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
@@ -183,13 +186,14 @@ frameName :: FileSequence -> Int -> PathString
 frameName fs_ frame_ = joinPath [path fs_, 
         concatPathString [name fs_, frameSep fs_, fromString frameNumber, extSep fs_, ext fs_]]
     -- where frameNumber = printf (padNumber frame_ (paddingLength fs_)) frame_
-    where frameNumber | paddingLength fs_ == Nothing = show frame_
-                      | otherwise = negStr ++ (replicate nZeros '0') ++ number
-          number = show frame_
+    where frameNumber 
+            | isNothing (paddingLength fs_) = show frame_
+            | otherwise = negStr ++ replicate nZeros '0' ++ absNumber
+          absNumber = show $ abs frame_
           negStr = if frame_ < 0
                      then "-"
                      else ""
-          nZeros = fromJust (paddingLength fs_) - length number - length negStr
+          nZeros = fromJust (paddingLength fs_) - length absNumber 
 
 -- |Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
@@ -199,28 +203,29 @@ frameRange fs_ = toList $ frames fs_
 frameList :: FileSequence -> [PathString]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
--- | From Real world haskell
-getRecursiveDirs :: PathString -> IO [PathString]
-getRecursiveDirs topdir = do
---    -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
-  namesAndTypes <- getDirectoryContents topdir
-  let properNames = filter ((`notElem` [".", ".."]).snd) namesAndTypes
-  paths <- forM properNames $ \(_,name_) -> do
-    let path_ = topdir </> name_
-    isDir <- isRawDir path_
-    if isDir
-      then getRecursiveDirs path_
-      else return []
-  return $ topdir: concat paths
-
--- |Split directories from files
-splitPaths :: [PathString] -> IO ([PathString], [PathString])
-splitPaths []     = return ([],[])
-splitPaths (x:xs) = do
-  -- isDir <- isDirectory <$> getFileStatus path
-  de <- isRawDir x
-  --fe <- isRawDir x
-  (yd, yf) <- splitPaths xs
-  return (conc de x yd, conc (not de) x yf)
-  where conc True x' xs' = x':xs'
-        conc False _ xs' = xs'
+-- | Arbitrary FileSequence generator
+instance Arbitrary FileSequence where
+   arbitrary = do
+     frames_ <- listOf1 arbitrary :: Gen [Int]
+     -- Positive len_ <- arbitrary
+     plen_ <- elements $ possiblePadding frames_
+     frameSep_ <- elements ["", ".", "_"]
+     pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
+     let fs = FileSequence
+                { frames = foldl addFrame [] frames_ 
+                , paddingLength = plen_ 
+                , path = pathName_ --  FIXME : arbitrary for file path
+                , name = "test" -- FIXME : arbitrary for names
+                , ext = "dpx" -- same as above
+                , frameSep = frameSep_
+                , extSep = "."}
+     return fs --`suchThat` paddingIsCoherent 
+     where possiblePadding frms= 
+                if differs $ countDigits frms
+                  then Nothing : digitRange frms
+                  else digitRange frms 
+           digitRange f = [Just x | x <- [maxDigit f .. 2 * maxDigit f]]
+           maxDigit = maximum . countDigits
+           countDigits = map (length.show.abs) 
+           differs (x:xs) = not $ all (==x) xs
+           differs [] = True

@@ -9,13 +9,16 @@ Library
                     System.FileSequence.Status,
                     System.FileSequence.Format,
                     System.FileSequence.Hash,
-                    System.FileSequence.SparseFrameList
-  build-depends: base, posix-paths, utf8-string, regex-pcre-builtin, filepath, directory, parallel, unix, bytestring, cryptohash
+                    System.FileSequence.SparseFrameList,
+                    System.FileSequence.Internal
+  build-depends: base, posix-paths, HTF, utf8-string
+               , regex-pcre-builtin, filepath, directory
+               , parallel, unix, bytestring, cryptohash, QuickCheck
   ghc-options:      -Wall -O2 -rtsopts 
   hs-source-dirs: src/
 
 executable seqls
-  build-depends: base, utf8-string, regex-pcre, filepath, directory, filesequence
+  build-depends: base, utf8-string, regex-pcre-builtin, filepath, directory, filesequence
   ghc-options:  -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqls.hs
@@ -33,7 +36,7 @@ executable seqsum
 --  main-is:  Seqcp.hs
 
 test-suite FileSequenceTests
-  build-depends:        base >= 4 && < 5, HTF, filesequence
+  build-depends:        base >= 4 && < 5, HTF, filesequence, bytestring
   ghc-options:          -O2 -Wall
   hs-source-dirs:       tests
   main-is:              Main.hs

@@ -44,7 +44,7 @@ isElementOf f ((a,b):xs)
 
 -- | List all the frames
 toList :: SparseFrameList -> [Frame]
-toList (x:xs) = [fst x .. snd x] ++ (toList xs)
+toList (x:xs) = [fst x .. snd x] ++ toList xs
 toList [] = []
 
 -- | First frame 
@@ -68,6 +68,6 @@ fromRange ff lf = [(ff,lf)]
 -- FIXME : check complexity
 holes :: SparseFrameList -> SparseFrameList
 holes [] = []
-holes ((a,b):xs)
-    | xs == [] = []
-    | otherwise = [(b+1, (fst (head xs))-1)] ++ holes xs
+holes ((_,b):xs)
+    | null xs = []
+    | otherwise = (b+1, fst (head xs)-1) : holes xs

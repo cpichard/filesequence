@@ -8,9 +8,8 @@ import System.FileSequence.Status
 import System.FileSequence.SparseFrameList
 import System.Environment
 import System.Console.GetOpt
-import System.Directory
 import Control.Monad (liftM)
-import Data.ByteString.UTF8 (fromString, toString)
+import Data.ByteString.UTF8 (fromString)
 -- TODO add full status options
 -- TODO add ordering options by size, etc
 -- TODO verbose
