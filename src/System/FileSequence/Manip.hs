@@ -1,6 +1,6 @@
 -- |Module FileSequence.Manip,
 {-# LANGUAGE Rank2Types #-}
- -- {-# LANGUAGE DeriveDataTypeable #-}
+-- {-# LANGUAGE DeriveDataTypeable #-}
 -- provides basic file sequence manipulation on the file system.
 module System.FileSequence.Manip ( 
     fileSequenceRemove,
@@ -16,16 +16,13 @@ import System.Posix.Directory.Traversals
 --import System.Posix.Directory.ByteString
 import System.Posix.Files.ByteString
 import System.Posix.IO.ByteString
--- import qualified Data.ByteString as BS
+--import qualified Data.ByteString as BS
 --import System.Directory
 --import System.Posix.Files
 --import System.Posix.IO
 import System.IO.Error
 import Control.Exception
 
-
-
- 
 -- |Type synonym for the map frames exception handler
 -- require Rank2Types
 type ExceptionHandler e = Exception e => (e -> IO ())
@@ -39,7 +36,7 @@ fileSequenceRemove fs_ =
 -- Returns the newly generated filesequence
 fileSequenceCopy :: Exception e 
                  => FileSequence        -- ^ FileSequence to copy 
-                 -> RawFilePath         -- ^ Destination directory
+                 -> PathString          -- ^ Destination directory
                  -> ExceptionHandler e  -- ^ Exception handler 
                  -> IO FileSequence     -- ^ Created sequence
 fileSequenceCopy fs_ path_ hand_ = do
@@ -55,10 +52,10 @@ fileSequenceCopy fs_ path_ hand_ = do
                return fsr_ 
        else throw $ mkIOError doesNotExistErrorType "does not exists" Nothing (Just (pathToString path_)) 
     where tryCopyFile a b = handle hand_ $ copyFile a b
-          copyFile a b = return () -- FIXME copy file for real
+          copyFile a b = error "implement copy"-- return () -- FIXME copy file for real
 
 -- |Move all filesequence frames to the new path
-fileSequenceMove :: FileSequence -> RawFilePath -> IO FileSequence
+fileSequenceMove :: FileSequence -> PathString -> IO FileSequence
 fileSequenceMove fs_ path_ = do
     pathSrc <- realpath $ path fs_
     pathDst <- realpath path_ 
@@ -71,7 +68,7 @@ fileSequenceMove fs_ path_ = do
 
 -- |map function for each frames (fs, fd) of the src and dst sequence
 -- src and dst must have the same number of frames
-mapFrames :: (RawFilePath -> RawFilePath -> IO ()) -- function to apply
+mapFrames :: (PathString -> PathString -> IO ()) -- function to apply
           -> FileSequence -- src frames
           -> FileSequence -- dst frames
           -> IO ()

@@ -12,7 +12,7 @@ import System.IO.Error
 import System.IO
 import Control.Exception
 import Control.Monad
-
+import System.FileSequence.Internal (consoleToPath)
 -- TODO verbose mode
 
 -- |Options for seqcp command line 
@@ -59,7 +59,7 @@ copySequence cpOpts =
     (Just s, Just p) -> do 
         when (verbose cpOpts)
            $ putStrLn "I am not in the mood for talking right now"
-        handle selectHandler $ void $ fileSequenceCopy s p selectHandler
+        handle selectHandler $ void $ fileSequenceCopy s (consoleToPath p) selectHandler
         where selectHandler | resume cpOpts = handleExceptAndResume
                             | otherwise = handleExceptAndExit     
               handleExceptAndExit e = handleExcept e >> exitFailure
@@ -95,11 +95,11 @@ processOptions optMod = readDstPath processedOptions
         readDstPath opt_ p_ = 
           case p_ of
             [seqn, ff, lf, dstp] 
-                -> opt_ { srcSeq = fileSequenceFromPrintfFormat seqn (read ff :: Int) (read lf :: Int)
+                -> opt_ { srcSeq = fileSequenceFromPrintfFormat (consoleToPath seqn) (read ff :: Int) (read lf :: Int)
                         , dstPath = Just dstp 
                         }
             [seqn, dstp]
-                -> opt_ { srcSeq = fileSequenceFromPrintfFormat seqn 0 0
+                -> opt_ { srcSeq = fileSequenceFromPrintfFormat (consoleToPath seqn) 0 0
                         , dstPath = Just dstp
                         }
             _ -> opt_

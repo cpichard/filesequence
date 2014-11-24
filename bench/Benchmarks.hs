@@ -1,12 +1,15 @@
 module Main where
-import Control.DeepSeq
+import System.Random
 import Criterion.Main
 import System.FileSequence.SparseFrameList
-import System.Random
+import Control.DeepSeq
 
 --addFrame :: SparseFrameList -> Frame -> SparseFrameList
 sparseFrameListTest :: [Int] -> SparseFrameList
-sparseFrameListTest frms = foldl addFrame [] frms
+--sparseFrameListTest frms = foldl addFrame [] frms
+sparseFrameListTest frms = addFrames [] frms
+    where addFrames sff (x:xs) = addFrames (addFrame sff x) xs
+          addFrames sff [] = sff
 
 -- Generate a list of n random frames
 randomFrames :: Int -> IO [Int]

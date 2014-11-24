@@ -26,7 +26,7 @@ module System.FileSequence (
     -- ** From names
     fileSequencesFromList,
     fileSequenceFromName,
-    --fileSequenceFromPrintfFormat,
+    fileSequenceFromPrintfFormat,
     -- * Accessors
     frameName,
     frameRange,
@@ -72,8 +72,8 @@ fileInSeq :: PathString
 fileInSeq = concatPathString ["(.*?)", frameSepReg, "(-?[0-9]+)", extSepReg, "([a-zA-Z0-9]+)$"]
 
 -- * Sequence in printf format
---seqInPrintf :: String
---seqInPrintf = "(.*?)" ++ frameSepReg ++ "%([0-9]+)d" ++ extSepReg ++ "([a-zA-Z0-9]+)$"
+seqInPrintf :: PathString
+seqInPrintf = concatPathString ["(.*?)", frameSepReg, "%([0-9]+)d", extSepReg, "([a-zA-Z0-9]+)$"]
 
 -- * Datatype
 -- |File sequence data structure.
@@ -163,23 +163,23 @@ fileSequenceFromName name_ =
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
---fileSequenceFromPrintfFormat :: String -> Int -> Int -> Maybe FileSequence
---fileSequenceFromPrintfFormat name_ ff lf = 
---    case regResult of
---      [[ _, fullName, sep1, code, sep2, ext_ ]]
---          -> Just FileSequence
---                    { frames = [((min ff lf), (max ff lf))]
---                    , paddingLength = Just (read code :: Int) -- FIXME %d should be Nothing
---                    , path = path_
---                    , name = fullName
---                    , ext = ext_
---                    , frameSep = sep1
---                    , extSep = sep2
---                    }
---      _ -> Nothing
---
---    where (path_, filename) = splitFileName name_
---          regResult = (toString filename) =~ seqInPrintf :: [[String]]
+fileSequenceFromPrintfFormat :: PathString -> Int -> Int -> Maybe FileSequence
+fileSequenceFromPrintfFormat name_ ff lf = 
+    case regResult of
+      [[ _, fullName, sep1, code, sep2, ext_ ]]
+          -> Just FileSequence
+                    { frames = [((min ff lf), (max ff lf))]
+                    , paddingLength = Just (read (toString code) :: Int) -- FIXME %d should be Nothing
+                    , path = path_
+                    , name = fullName
+                    , ext = ext_
+                    , frameSep = sep1
+                    , extSep = sep2
+                    }
+      _ -> Nothing
+
+    where (path_, filename) = splitFSName name_
+          regResult = filename =~ seqInPrintf :: [[ByteString]]
 
 -- |Returns the filename of the frame number
 frameName :: FileSequence -> Int -> PathString
