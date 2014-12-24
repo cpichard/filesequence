@@ -71,3 +71,13 @@ holes [] = []
 holes ((_,b):xs)
     | null xs = []
     | otherwise = (b+1, fst (head xs)-1) : holes xs
+
+
+nbFrames :: SparseFrameList -> Int
+nbFrames [] = 0
+nbFrames ((ff, lf):xs) = (lf-ff+1) + (nbFrames xs)
+
+
+nbMissing :: SparseFrameList -> Int
+nbMissing fss = nbFrames $ holes fss
+

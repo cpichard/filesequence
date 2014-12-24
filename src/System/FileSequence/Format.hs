@@ -78,6 +78,7 @@ formatResult opts =
               showFuncs =   consIf (showStats opts) (formatPermFunction opts . snd)
                           $ consIf (showStats opts) (formatSizesFunction opts . snd)
                           $ consIf (showStats opts) (formatFrameFunction opts . fst)
+                          $ consIf (showStats opts) (formatNumberOfFrames opts . fst)
                           $ consIf True (formatSequenceFunction opts . fst)
                           $ consIf showFrameBehind (formatFrameFunction opts . fst)
                           $ consIf (showMissing opts) (formatMissing opts . fst) []
@@ -151,7 +152,12 @@ formatSizesFunction _ fss =
             | shiftR s 30 <= 0 = showp $ printf "%4.2fM" (fromIntegral s/(1024*1024) :: Float)
             | shiftR s 40 <= 0 = showp $ printf "%4.2fG" (fromIntegral s/(1024*1024*1024) :: Float)
             | otherwise        = showp $ printf "%4.2fT" (fromIntegral s/(1024*1024*1024*1024) :: Float)
-          showp n = padBy 8 ' ' n :: String
+          showp n = padBy 8 ' ' n :: ConsoleString
+
+-- |Format the number of frames
+formatNumberOfFrames :: FormatingOptions -> FileSequence -> ConsoleString
+formatNumberOfFrames _ fs = (showp $ nbFrames (frames fs)) ++ "  " ++ (showp $ nbMissing (frames fs))
+    where showp n = padBy 8 ' ' (show n)
 
 -- |Format the file permissions
 -- Change the permission to "?" when multiple files have different permissions 

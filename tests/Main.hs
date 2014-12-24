@@ -86,5 +86,12 @@ prop_bijectiveFunc fs =  sort (frameList fs1) == sort (frameList fs2)
         fs2 = head $ fileSequencesFromList (frameList fs1)
 
 
+-- |Number of missing frames max-min - nbframes
+prop_holeSize :: SparseFrameList -> Bool
+prop_holeSize [] = nbMissing [] == nbFrames [] -- no frames at all 
+prop_holeSize fs = nbMissing fs == lastFrame fs - firstFrame fs + 1 - nbFrames fs
+
+
+
 main ::IO ()
 main = htfMain htf_thisModulesTests
