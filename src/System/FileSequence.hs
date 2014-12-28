@@ -33,27 +33,23 @@ module System.FileSequence (
     frameList,
     -- * Utils
     getRecursiveDirs,
-
+    splitNonContiguous, 
+    -- * Export internal structures
     PathString,
     splitPaths,
+
 ) where
 
---import System.Directory
 import System.Posix.FilePath
 import System.Posix.Directory.Traversals
 import System.Posix.Files.ByteString
 import Control.Monad
---import Data.List
 import Text.Regex.PCRE
---import Text.Regex.PCRE.ByteString
 import System.FileSequence.SparseFrameList
---import qualified Data.ByteString as BS
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (fromJust)
 import System.FileSequence.Internal        
---import System.Posix.Directory.Traversals
 import Data.ByteString.Internal
---import Data.String
 import Data.Maybe (isNothing)
 import Test.QuickCheck
 import qualified Data.ByteString.Char8 as BC
@@ -103,10 +99,9 @@ sameSequence fs1 fs2 =
 fileSequencesFromPaths :: [PathString]        -- ^ List of directories
                        -> IO [FileSequence] -- ^ Sequences of files found
 fileSequencesFromPaths paths = do
-    --  FIXME use realPath
-    --  canonicPaths <- mapM canonicalizePath paths 
-    -- filesFound <- mapM directoryContents canonicPaths
-    filesFound <- mapM directoryContents paths
+    canonicPaths <- mapM realPath paths 
+    filesFound <- mapM directoryContents canonicPaths
+    -- filesFound <- mapM directoryContents paths
     return $ concatMap fileSequencesFromList filesFound
     where directoryContents dir = do
             -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
@@ -229,3 +224,8 @@ instance Arbitrary FileSequence where
            countDigits = map (length.show.abs) 
            differs (x:xs) = not $ all (==x) xs
            differs [] = True
+
+-- |Split a sequence into a list of sequence having contiguous frames (no holes)
+splitNonContiguous :: FileSequence -> [FileSequence]
+splitNonContiguous fs = map buildSeq $ frames fs 
+    where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
