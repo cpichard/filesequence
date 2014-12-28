@@ -10,6 +10,7 @@ import System.Environment
 import System.Console.GetOpt
 import Control.Monad (liftM)
 import Data.ByteString.UTF8 (fromString)
+
 -- TODO add full status options
 -- TODO add ordering options by size, etc
 -- TODO verbose
@@ -74,35 +75,45 @@ processOptions optFunc = addDirectoryList processedOptions
 -- |Finally force the printing of the sequences
 showFoundSequences :: SeqLsData -> IO ()
 showFoundSequences opts = do
-  -- partition directories and files
+  --partition directories and files from command line
   (directories, files) <- splitPaths $ map fromString (pathList opts)
-  
-  -- recursive mode ?
+  --in recursive mode add sub directories 
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)
         else return directories
-  --find sequences in directories
+  --find sequences in directories passed as arguments 
   sequencesInDirs  <- fileSequencesFromPaths alldirs
-  --same for the files
-  sequencesOfFiles <- fileSequencesFromFiles files
+  --find sequences in files passed as arguments
+  sequencesInFiles <- fileSequencesFromFiles files
+  --apply filters to select required sequences
+  let allSequences = filterMinFrame $ sequencesInFiles ++ sequencesInDirs
+      allRequired = if contiguous opts
+                      then concatMap splitNonContiguous allSequences
+                      else allSequences
+
+  if showStats (outputFormat opts)
+    then do
+        allRequiredStats <- mapM fileSequenceStatus allRequired
+        let zipped = zip allRequired allRequiredStats
+        mapM_ (putStrLn.formatWithStats) zipped 
+    else
+        mapM_ (putStrLn.formatSimple) allRequired 
+
   --look for sequence extra infos
   -- TODO: when not needed, bypass getStatus as it is taking
   --       a HUGE amount of time 
-  let allSequences = filterMinFrame $ sequencesOfFiles ++ sequencesInDirs
-  status <- mapM fileSequenceStatus allSequences
-  --only contiguous sequences ? -- FIXME do this partition before
-  zipped <- if contiguous opts
-              then contZipped allSequences
-              else return (zip allSequences status)
+  -- How lazy works here
+  -- allRequiredStats <- mapM fileSequenceStatus allRequired
+
   -- finally display all sequences
-  mapM_ (putStrLn.format) zipped
-  where format = formatResult (outputFormat opts)
+  --mapM_ (putStrLn.format) $ zip allRequired allRequiredStats
+  --mapM_ (putStrLn.formatt) allRequired
+  where -- formatt = formatSequenceFunction (outputFormat opts)
+        formatWithStats = formatResultWithStats (outputFormat opts) 
+        formatSimple = formatSimpleResults (outputFormat opts)
+        --format = formatResult (outputFormat opts)
         filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
-        contSeqs = concatMap splitNonContiguous 
-        contZipped as_ = do 
-                contStatus <- mapM fileSequenceStatus (contSeqs as_)
-                return $ zip (contSeqs as_) contStatus
 
 -- |Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
