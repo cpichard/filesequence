@@ -2,7 +2,7 @@
 -- |Functions to format FileSequence informations to a string, like 'ls' output.   
 module System.FileSequence.Format (
     -- * Formating options datas
-      FormatingOptions
+      FormatingOptions (showStats)
     -- * Formating options data modifiers
     , defaultFormatingOptions
     , setFullPath
@@ -11,9 +11,9 @@ module System.FileSequence.Format (
     , setFormatFromString
     -- * Format string from FileSequence
     , formatSequenceFunction
-    , formatResult
-    -- * Utils
-    , splitNonContiguous
+    , formatResultWithStats
+    , formatSimpleResults
+    , formatPermFunction
 ) where
 
 import System.FileSequence
@@ -66,12 +66,35 @@ setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
         formatFromString "printf" = Printf
         formatFromString _        = Nuke
 
+-- |Format FileSequence  similarly to ls
+-- Builds a string from the FileSequence infos and the formating options
+-- FIXME : this function shares the same structure with formatResultWithStats except
+-- it doesn't need status information. It is done this way to improve parsing speed
+-- by avoiding the use of stat. Is it possible to build only function using lazyness ?
+formatSimpleResults :: FormatingOptions
+            -> FileSequence
+            -> ConsoleString
+formatSimpleResults opts = 
+    \fs -> concatMap ($ fs) layoutFuncs 
+        where layoutFuncs = intersperse spacefunc showFuncs
+              -- build a list of "show" functions depending on a condition
+              showFuncs =   consIf (showStats opts) (formatFrameFunction opts )
+                          $ consIf (showStats opts) (formatNumberOfFrames opts)
+                          $ consIf True (formatSequenceFunction opts)
+                          $ consIf showFrameBehind (formatFrameFunction opts)
+                          $ consIf (showMissing opts) (formatMissing opts) []
+              spacefunc _ = "  " -- Add space between 
+              consIf x y = if x then (y:) else id
+              showFrameBehind = case sequenceFormat opts of
+                                   Rv -> False
+                                   _  -> not (showStats opts) 
+
 -- |Format FileSequence and status similarly to ls
 -- Builds a string from the FileSequence infos and the formating options
-formatResult :: FormatingOptions
+formatResultWithStats :: FormatingOptions
              -> (FileSequence, FileSequenceStatus)
              -> ConsoleString
-formatResult opts =
+formatResultWithStats opts =
     \fs -> concatMap ($ fs) layoutFuncs
         where layoutFuncs = intersperse spacefunc showFuncs
               -- build a list of "show" functions depending on a condition
@@ -87,7 +110,6 @@ formatResult opts =
               showFrameBehind = case sequenceFormat opts of
                                    Rv -> False
                                    _  -> not (showStats opts) 
-                                   
 
 -- |Returns the formating function associated to the formating options
 formatSequenceFunction :: FormatingOptions -> FileSequence -> ConsoleString
@@ -208,8 +230,4 @@ padBy n c s = replicate (mod (- length s) n) c ++ s
 --         grpCon fir las _ ret = ret ++ [(fir, las)]
 --groupContiguousFrames _      = []  
 
--- |Split a sequence into a list of sequence having contiguous frames (no holes)
-splitNonContiguous :: FileSequence -> [FileSequence]
-splitNonContiguous fs = map buildSeq $ frames fs 
-    where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
 
