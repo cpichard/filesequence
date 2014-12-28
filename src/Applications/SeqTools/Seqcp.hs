@@ -12,8 +12,10 @@ import System.IO.Error
 import System.IO
 import Control.Exception
 import Control.Monad
-import System.FileSequence.Internal (consoleToPath)
+import System.FileSequence.Internal (consoleToPath, copyFile)
 -- TODO verbose mode
+-- TODO option to avoid overwritting an existing file
+-- TODO async mode, multiple copies at the same time
 
 -- |Options for seqcp command line 
 data SeqCpOptions =
@@ -99,6 +101,7 @@ processOptions optMod = readDstPath processedOptions
                         , dstPath = Just dstp 
                         }
             [seqn, dstp]
+                -- FIXME : read the fileSequence from the disk to get the boundaries
                 -> opt_ { srcSeq = fileSequenceFromPrintfFormat (consoleToPath seqn) 0 0
                         , dstPath = Just dstp
                         }
