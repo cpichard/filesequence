@@ -44,6 +44,7 @@ test-suite FileSequenceTests
 
 benchmark bench-builder-all
   build-depends:    base, deepseq, filesequence, random, criterion 
+  ghc-options:      -O2 -Wall
   hs-source-dirs:   bench
   main-is:          Benchmarks.hs
   type:             exitcode-stdio-1.0
