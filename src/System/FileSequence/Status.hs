@@ -1,14 +1,12 @@
 -- |Functions to extract additional informations like permissions or size from a
--- sequence of files. Is relevant only when the sequence is on the disk, not virtual
+-- |sequence of files. It is used only when the sequence is on the disk, not just a list
+-- |of names
 
 module System.FileSequence.Status where
 
 import System.FileSequence
 --import System.Posix.Directory.Traversals
---import System.Posix.FilePath
---import System.Posix.Files
 import System.Posix.Files.ByteString
---import System.Posix.IO.ByteString
 import System.Posix.Types
 
 -- | A file permission
@@ -56,12 +54,12 @@ sumFileSequenceMode a (Just b) = FileSequenceMode owrp owwp owep grrp grwp grep 
         syml = hasSameMode isSymLink      a b
 sumFileSequenceMode a Nothing = a
 
--- | Structure to store relevant file sequence informations
+-- |Structure to store relevant file sequence informations
 data FileSequenceStatus = FileSequenceStatus
-  { perms   :: Maybe FileSequenceMode      -- ^ Different permissions found for a sequence
-  , maxSize :: FileOffset       -- ^ Max size found in all the frames
-  , minSize :: FileOffset       -- ^ Min size found in all the frames
-  , totSize :: FileOffset       -- ^ Total size found in all the frames
+  { perms   :: Maybe FileSequenceMode   -- ^ Different permissions found for a sequence
+  , maxSize :: FileOffset               -- ^ Max size found in all the frames
+  , minSize :: FileOffset               -- ^ Min size found in all the frames
+  , totSize :: FileOffset               -- ^ Total size found in all the frames
     -- other infos will be stored here !
   } deriving Show
 
@@ -69,15 +67,15 @@ data FileSequenceStatus = FileSequenceStatus
 newFileSequenceStatus :: FileSequenceStatus
 newFileSequenceStatus = FileSequenceStatus Nothing minBound maxBound 0
 
--- |With the new frame of a filesequence, update the file sequence status data
-foldStatus :: FileSequence -> FileSequenceStatus -> [Int] -> IO FileSequenceStatus
-foldStatus fs fss (x:xs) = do
-  --isNotMissing <- doesFileExist $ filepath x
-  --if isNotMissing
-    --then do
-      --status <- getSymbolicLinkStatus x
-      status <- getFileStatus $ filepath x
-      foldStatus fs (update_ status fss) xs
+-- |With a new frame of a filesequence, update the file sequence status data
+foldStatus :: (PathString -> IO FileStatus)  -- stat function
+           -> FileSequence                   --
+           -> FileSequenceStatus             --
+           -> [Int]                          -- Frames 
+           -> IO FileSequenceStatus
+foldStatus sf fs fss (x:xs) = do
+      status <- sf $ filepath x
+      foldStatus sf fs (update_ status fss) xs
   where filepath = frameName fs 
         update_ st_ fss_ = fss_
           { perms = Just $ sumFileSequenceMode (modeFromFileStatus st_) (perms fss_)
@@ -86,13 +84,15 @@ foldStatus fs fss (x:xs) = do
           , totSize = fileSize st_ + totSize fss_
           }
 
-foldStatus _ fss_ [] = return fss_
+foldStatus _ _ fss_ [] = return fss_
 
 -- |Returns the status of a FileSequence
 fileSequenceStatus :: FileSequence -> IO FileSequenceStatus
-fileSequenceStatus fs_ = foldStatus fs_ newFileSequenceStatus (frameRange fs_)
+fileSequenceStatus fs_ = foldStatus getFileStatus fs_ newFileSequenceStatus (frameRange fs_)
 
-
+-- |Returns the status of FileSequence without following the symlinks
+fileSequenceSymlinkStatus :: FileSequence -> IO FileSequenceStatus
+fileSequenceSymlinkStatus fs_ = foldStatus getSymbolicLinkStatus fs_ newFileSequenceStatus (frameRange fs_)
 
 
 

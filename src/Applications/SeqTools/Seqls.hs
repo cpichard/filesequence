@@ -22,6 +22,7 @@ data SeqLsData = SeqLsData
     , recursive       :: Bool
     , minFrames       :: Int
     , contiguous      :: Bool
+    , followLink      :: Bool
     } deriving Show
 
 -- |Default seqls datas
@@ -32,6 +33,7 @@ defaultOptions = SeqLsData
     , recursive = False
     , minFrames = 1
     , contiguous = False
+    , followLink = True
     }
 
 -- |List of options modifiers
@@ -59,6 +61,9 @@ options =
     , Option "c" ["contiguous"]
        (NoArg (\opt -> opt {contiguous=True}))
        "Display sequence with contiguous frame only"
+    , Option "s" ["nosymlink"]
+       (NoArg (\opt -> opt {followLink=False}))
+       "Do not follow symlinks"
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
@@ -94,7 +99,9 @@ showFoundSequences opts = do
 
   if showStats (outputFormat opts)
     then do
-        allRequiredStats <- mapM fileSequenceStatus allRequired
+        allRequiredStats <- if (followLink opts)
+                then mapM fileSequenceStatus allRequired
+                else mapM fileSequenceSymlinkStatus allRequired
         let zipped = zip allRequired allRequiredStats
         mapM_ (putStrLn.formatWithStats) zipped 
     else

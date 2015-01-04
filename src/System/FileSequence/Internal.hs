@@ -3,12 +3,10 @@
 module System.FileSequence.Internal where
 
 import Foreign
-import Foreign.C
 
 import System.Posix.FilePath
 import Control.Applicative
 import Control.Monad (forM, when)
---import System.Posix.Files.ByteString
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BC
 import System.Posix.Files.ByteString
@@ -19,26 +17,27 @@ import Control.Exception
 import System.IO.Error
 
 -- |FileSequence path type
--- |This is the type we want to process the path information
+-- |We use raw bytes to process the path information
 type PathString = RawFilePath
 
--- |Genererate arbitrary PathString for quickcheck
+-- |Generate arbitrary PathString for quickcheck testing
 instance Arbitrary PathString where
    arbitrary = BC.pack <$> listOf arbitrary
 
+-- Note: we should define
 --instance IsString PathString where
 --  fromString g = BC.unpack g
--- duplicates:
+-- but it duplicates:
 -- instance IsString BC.ByteString
 -- Defined in ‘Data.ByteString.Internal’
 
 -- Displayed string 
--- This is the type we want to use to display results
+-- We use UTF8 haskell String to display the results
 type ConsoleString = String
 
 -- |Split filesequence name
-splitFSName :: PathString -> (PathString, PathString)
-splitFSName x = (BC.reverse b, BC.reverse a)
+splitDirectoryAndFile :: PathString -> (PathString, PathString)
+splitDirectoryAndFile x = (BC.reverse b, BC.reverse a)
     where (a,b) = BC.break (=='/') $ BC.reverse x
 
 -- | From Real world haskell
@@ -75,20 +74,6 @@ concatPathString = BS.concat
 concatConsoleString :: [ConsoleString] -> ConsoleString
 concatConsoleString = concat
 
--- |Wrapper over posix realpath
-realPath :: PathString -> IO PathString
-realPath p = do
-  BC.useAsCString p $ \pIn ->
-    allocaBytes long_path_size $ \pOut ->
-      do out <- c_realpath pIn pOut
-         BC.packCString out
-
-foreign import ccall unsafe "__hscore_long_path_size"
-  long_path_size :: Int
-
-foreign import ccall unsafe "realpath" 
-  c_realpath :: CString -> CString -> IO CString
-
 -- Conversion
 consoleToPath :: ConsoleString -> PathString
 consoleToPath = BC.pack
@@ -102,8 +87,6 @@ pathToString = BC.unpack
 --
 isRawDir :: PathString -> IO Bool
 isRawDir f = isDirectory <$> getFileStatus f
-
-
 
 -- |Copy files for internal types
 copyFile :: PathString -> PathString -> IO ()

@@ -11,7 +11,6 @@ module System.FileSequence.Manip (
 
 import System.FileSequence
 import System.FileSequence.Internal
-import System.Posix.FilePath
 import System.Posix.Directory.Traversals
 import System.Posix.Files.ByteString
 import System.Posix.IO.ByteString
