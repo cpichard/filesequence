@@ -1,9 +1,9 @@
 -- | Module FileSequence.SparseFrameList,
 -- Implements a simple data structure to store
 -- sparse sub-sequences of a sequence of frame
--- ex: [(1,5), (7,10)] represents frames from 1 to 5 and 7 to 10
+-- ex: [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
 -- The first naive implementation with a list of tuple
--- seems to work just fine in terms of performances.
+-- seems to work just fine in terms of performances in a classical use case.
  
 module System.FileSequence.SparseFrameList where
 type Frame = Int
@@ -34,13 +34,13 @@ isElementOf f ((a,b):xs)
   | f >= a && f <= b = True
   | otherwise = isElementOf f xs
 
---unionFrameRange ::
+-- unionFrameRange :: future programming
 
---intersectFrameRange :: 
+-- intersectFrameRange :: future programming
 
---removeFrame
+-- removeFrame :: future programming
 
--- removeFrameRange
+-- removeFrameRange :: future programming
 
 -- | List all the frames
 toList :: SparseFrameList -> [Frame]
@@ -63,8 +63,8 @@ fromRange ff lf = [(ff,lf)]
 
 
 -- | Returns the list of missing frames
--- ex : holes [(1,5), (7,10), (15,20)]
---      [(6,6), (11,14)]
+-- ex :> holes [(1,5), (7,10), (15,20)]
+--     > [(6,6), (11,14)]
 -- FIXME : check complexity
 holes :: SparseFrameList -> SparseFrameList
 holes [] = []
@@ -72,12 +72,12 @@ holes ((_,b):xs)
     | null xs = []
     | otherwise = (b+1, fst (head xs)-1) : holes xs
 
-
+-- |Returns the number of frames
 nbFrames :: SparseFrameList -> Int
 nbFrames [] = 0
 nbFrames ((ff, lf):xs) = (lf-ff+1) + (nbFrames xs)
 
-
+-- |Returns the number of missing frames
 nbMissing :: SparseFrameList -> Int
 nbMissing fss = nbFrames $ holes fss
 
