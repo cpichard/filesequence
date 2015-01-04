@@ -73,7 +73,7 @@ seqInPrintf = concatPathString ["(.*?)", frameSepReg, "%([0-9]+)d", extSepReg, "
 
 -- * Datatype
 -- |File sequence data structure.
---  Stores frame range, name, views, extension, padding length
+-- |Stores frame range, name, views, extension, padding length
 data FileSequence = FileSequence {
       frames            :: SparseFrameList
     , paddingLength     :: Maybe Int  -- ^ Padding = number of digit for a frame ex: 00012 -> 5
@@ -95,11 +95,11 @@ sameSequence fs1 fs2 =
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
 
--- |Find all the file sequences inside multiple paths
+-- |Find all the file sequences inside multiple directory
 fileSequencesFromPaths :: [PathString]        -- ^ List of directories
-                       -> IO [FileSequence] -- ^ Sequences of files found
+                       -> IO [FileSequence]   -- ^ Sequences of files found
 fileSequencesFromPaths paths = do
-    canonicPaths <- mapM realPath paths 
+    canonicPaths <- mapM realpath paths 
     filesFound <- mapM directoryContents canonicPaths
     -- filesFound <- mapM directoryContents paths
     return $ concatMap fileSequencesFromList filesFound
@@ -114,7 +114,7 @@ fileSequencesFromFiles files = do
   existingFiles <- filterM fileExist files
   return $ fileSequencesFromList existingFiles
 
--- |Returns the file sequences of a list of names
+-- |Returns the file sequences of a list of file names
 fileSequencesFromList :: [PathString] -> [FileSequence]
 fileSequencesFromList nameList = findseq nameList []
     where findseq (x:xs) found =
@@ -154,7 +154,7 @@ fileSequenceFromName name_ =
                             | otherwise = Just $ length (toString num) - 1
         _   -> Nothing
 
-    where (path_, filename) = splitFSName name_
+    where (path_, filename) = splitDirectoryAndFile name_
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
@@ -173,7 +173,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
                     }
       _ -> Nothing
 
-    where (path_, filename) = splitFSName name_
+    where (path_, filename) = splitDirectoryAndFile name_
           regResult = filename =~ seqInPrintf :: [[ByteString]]
 
 -- |Returns the filename of the frame number
@@ -198,7 +198,7 @@ frameRange fs_ = toList $ frames fs_
 frameList :: FileSequence -> [PathString]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
--- | Arbitrary FileSequence generator
+-- |Arbitrary FileSequence generator
 instance Arbitrary FileSequence where
    arbitrary = do
      frames_ <- listOf1 arbitrary :: Gen [Int]
@@ -229,3 +229,4 @@ instance Arbitrary FileSequence where
 splitNonContiguous :: FileSequence -> [FileSequence]
 splitNonContiguous fs = map buildSeq $ frames fs 
     where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
+
