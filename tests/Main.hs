@@ -24,7 +24,7 @@ test_negativeFrames = assertEqual a b
     where b = fileSequencesFromList ["test.-0004.dpx", "test.-0003.dpx"]
           a =[FileSequence 
                 { frames = [(-4,-3)]
-                , paddingLength = Just 4 
+                , padding = PaddingFixed 4 
                 , path = ""
                 , name = "test"
                 , ext = "dpx"
@@ -37,7 +37,7 @@ test_sequenceWithoutName = assertEqual a b
     where b = fileSequenceFromName "0005.dpx"
           a = Just FileSequence 
                     { frames = [(5,5)]
-                    , paddingLength = Just 4
+                    , padding = PaddingFixed 4
                     , path = ""
                     , name = ""
                     , ext = "dpx"
@@ -50,7 +50,7 @@ test_utf8 = assertEqual a b
     where b = fileSequenceFromName "fffèè.0003.fg"
           a = Just FileSequence 
                     { frames = [(3,3)]
-                    , paddingLength = Just 4
+                    , padding = PaddingFixed 4
                     , path = ""
                     , name = "fffèè"
                     , ext = "fg"
@@ -66,13 +66,13 @@ test_minusZero = assertEqual a b
 -- | Series of tests with the following case
 -- | "a sequence can't have the same frame twice"
 sameFrameTwice :: [PathString]
-sameFrameTwice = ["b.01.t", "b.10.tmp", "b.010.tmp"]
+sameFrameTwice = ["b.01.tmp", "b.10.tmp", "b.010.tmp"]
 
 -- | If there is the same frame twice in a list, it is sure that the padding is
 --   different so we should find two distinct sequences
 test_sameFrameTwice :: IO ()
 test_sameFrameTwice = do assertBool $ length b == 2
-		         assertNotEqual c d 
+		         assertEqual c d 
     where b = fileSequencesFromList sameFrameTwice 
 	  c = isElementOf 10 $ frames (head b)
 	  d = isElementOf 10 $ frames (last b)
@@ -86,10 +86,10 @@ test_frameRestitution = do assertEqual a b
 -- | Extended padding
 test_extendedPadding :: IO ()
 test_extendedPadding = assertEqual a b
-    where a = fileSequencesFromList ["b.01.t", "b.10.tmp", "b.100.tmp"]
+    where a = fileSequencesFromList ["b.01.tmp", "b.10.tmp", "b.100.tmp"]
 	  b = [FileSequence 
 		{ frames = [(1,1),(10,10),(100,100)]
-		, paddingLength = Just 2 
+		, padding = PaddingFixed 2
 		, path = ""
 		, name = "b"
 		, ext = "tmp"

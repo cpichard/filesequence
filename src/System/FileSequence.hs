@@ -19,6 +19,8 @@
 module System.FileSequence (
     -- * FileSequence structure
     FileSequence(..),
+    -- * Padding structure
+    Padding(..),
     -- * Creation functions
     -- ** From existing directory or files
     fileSequencesFromPaths,
@@ -50,7 +52,7 @@ import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (fromJust)
 import System.FileSequence.Internal        
 import Data.ByteString.Internal
-import Data.Maybe (isNothing)
+import Data.Maybe (isJust)
 import Test.QuickCheck
 import qualified Data.ByteString.Char8 as BC
 
@@ -71,12 +73,38 @@ fileInSeq = concatPathString ["(.*?)", frameSepReg, "((-?)([0-9]+))", extSepReg,
 seqInPrintf :: PathString
 seqInPrintf = concatPathString ["(.*?)", frameSepReg, "%([0-9]+)d", extSepReg, "([a-zA-Z0-9]+)$"]
 
+-- | Padding information 
+--   We consider 2 cases:
+--    * PaddingFixed:
+--      when the padding is fixed and we know it because the number is prefixed with zeroes
+--      like 010, 00010, etc.
+--    * PaddingMax:
+--      when we are not sure the padding is fixed
+--      like 677 100 400
+--      however it can't be superior to the number of digits
+data Padding = PaddingFixed Int 
+	     | PaddingMax Int
+             deriving (Show, Eq)
+
+-- | Paddings can be merged if they are compatible.
+--   To be compatible, they should be able to restitute the frame string
+--   with a printf("%0xd") 
+mergePadding :: Padding -> Padding -> Maybe Padding
+mergePadding (PaddingFixed a) (PaddingFixed b)
+        | a == b = Just $ PaddingFixed a -- same fixed padding
+        | otherwise = Nothing 		 -- different padding ex: 010 != 0010
+mergePadding (PaddingMax a) (PaddingFixed b) 
+        | b <= a = Just $ PaddingFixed b
+        | otherwise = Nothing
+mergePadding (PaddingFixed a) (PaddingMax b) = mergePadding (PaddingMax b) (PaddingFixed a)
+mergePadding (PaddingMax a) (PaddingMax b) = Just $ PaddingMax (min a b)
+
 -- * Datatype
--- |File sequence data structure.
--- |Stores frame range, name, views, extension, padding length
+-- | File sequence data structure.
+-- | Stores frame range, name, views, extension, padding length
 data FileSequence = FileSequence {
       frames            :: SparseFrameList
-    , paddingLength     :: Maybe Int  -- ^ Padding = number of digit for a frame ex: 00012 -> 5
+    , padding           :: Padding    -- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: PathString -- ^ Directory of the sequence
     , name              :: PathString -- ^ Name or prefix of the sequence,
     , ext               :: PathString -- ^ Extension
@@ -84,18 +112,18 @@ data FileSequence = FileSequence {
     , extSep            :: PathString -- ^ Char used to separate the extension
     } deriving (Show, Eq)
 
--- |Returns true if two sequences have the same signature.
--- |Two filesequences have the same signature if
--- |they share the same name, path, ext, step
-sameSequence :: FileSequence -> FileSequence -> Bool
-sameSequence fs1 fs2 =
+-- | Returns true if two sequences have the same signature.
+-- | Two filesequences have the same signature if
+-- | they share the same name, path, ext, step
+sameSignature :: FileSequence -> FileSequence -> Bool
+sameSignature fs1 fs2 =
        name fs1 == name fs2
     && path fs1 == path fs2
     && ext  fs1 == ext  fs2
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
 
--- |Find all the file sequences inside multiple directory
+-- | Find all the file sequences inside multiple directory
 fileSequencesFromPaths :: [PathString]        -- ^ List of directories
                        -> IO [FileSequence]   -- ^ Sequences of files found
 fileSequencesFromPaths paths = do
@@ -104,37 +132,35 @@ fileSequencesFromPaths paths = do
     -- filesFound <- mapM directoryContents paths
     return $ concatMap fileSequencesFromList filesFound
     where directoryContents dir = do
-            -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
             files <- getDirectoryContents dir
             filterM fileExist $ map (combine dir.snd) files
 
--- |Find the sequences from a list of files on the disk
+-- | Find the sequences from a list of files on the disk
 fileSequencesFromFiles :: [PathString] -> IO [FileSequence]
 fileSequencesFromFiles files = do
   existingFiles <- filterM fileExist files
   return $ fileSequencesFromList existingFiles
 
--- |Returns the file sequences of a list of file names
+-- | Returns the file sequences of a list of file names
 fileSequencesFromList :: [PathString] -> [FileSequence]
 fileSequencesFromList nameList = findseq nameList []
-    where findseq (x:xs) found =
+    where findseq (x:xs) found = 
             case fileSequenceFromName x of
                 Nothing -> findseq xs found
                 Just fs -> 
-                    let (a,b) = break (sameSequence fs) found in 
+                    let (a,b) = break (compatibleSequence fs) found in
                     case b of 
                         []     -> findseq xs (fs:found)
                         (y:ys) -> findseq xs $ mergeSequence y fs : (a++ys)
           findseq [] found = found
+	  mergePaddingFs fs1 fs2 = mergePadding (padding fs1) (padding fs2)
+	  compatibleSequence fs1 fs2 = (sameSignature fs1 fs2) && (isJust $ mergePaddingFs fs1 fs2) 
           mergeSequence fs1 fs2 = 
                 fs1 { frames = addFrame (frames fs1) (firstFrame (frames fs2))
-                    , paddingLength = deducePadding fs1 fs2
-                    }
-          deducePadding fs1 fs2
-            | paddingLength fs1 == paddingLength fs2 = paddingLength fs1
-            | otherwise = Nothing
+                    , padding = fromJust $ mergePaddingFs fs1 fs2 
+		    }
 
--- |Return a FileSequence if the name follows the convention
+-- | Return a FileSequence if the name follows the convention
 fileSequenceFromName :: PathString -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
@@ -143,7 +169,7 @@ fileSequenceFromName name_ =
 		 then Nothing
 		 else Just FileSequence  
 				{ frames = addFrame [] frameNo
-				, paddingLength = deducePadding 
+				, padding = deducePadding 
 				, path = path_
 				, name = fullName
 				, ext = ext_
@@ -151,20 +177,22 @@ fileSequenceFromName name_ =
 				, extSep = sep2 
 				} 
                 where frameNo = read (toString num) :: Int 
-                      deducePadding = Just $ length (toString numbers)
+		      numberLength = length (toString numbers)
+                      deducePadding | abs frameNo < 10^(numberLength-1) = PaddingFixed numberLength
+				    | otherwise = PaddingMax numberLength
         _   -> Nothing
 
     where (path_, filename) = splitDirectoryAndFile name_
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
--- |Decode the filesequence from a printf format and the first and last frames 
+-- | Decode the filesequence from a printf format and the first and last frames 
 fileSequenceFromPrintfFormat :: PathString -> Int -> Int -> Maybe FileSequence
 fileSequenceFromPrintfFormat name_ ff lf = 
     case regResult of
       [[ _, fullName, sep1, code, sep2, ext_ ]]
           -> Just FileSequence
                     { frames = [((min ff lf), (max ff lf))]
-                    , paddingLength = Just (read (toString code) :: Int) -- FIXME %d should be Nothing
+                    , padding = PaddingFixed (read (toString code) :: Int) -- FIXME %d should be Nothing
                     , path = path_
                     , name = fullName
                     , ext = ext_
@@ -176,29 +204,29 @@ fileSequenceFromPrintfFormat name_ ff lf =
     where (path_, filename) = splitDirectoryAndFile name_
           regResult = filename =~ seqInPrintf :: [[ByteString]]
 
--- |Returns the filename of the frame number
+-- | Returns the filename of the frame number
 frameName :: FileSequence -> Int -> PathString
 frameName fs_ frame_ = joinPath [path fs_, 
         concatPathString [name fs_, frameSep fs_, fromString frameNumber, extSep fs_, ext fs_]]
-    -- where frameNumber = printf (padNumber frame_ (paddingLength fs_)) frame_
-    where frameNumber 
-            | isNothing (paddingLength fs_) = show frame_
-            | otherwise = negStr ++ replicate nZeros '0' ++ absNumber
+    where frameNumber =
+            case padding fs_ of		
+              PaddingMax _ -> show frame_
+	      PaddingFixed li -> negStr ++ replicate (nZeros li) '0' ++ absNumber
           absNumber = show $ abs frame_
           negStr = if frame_ < 0
                      then "-"
                      else ""
-          nZeros = fromJust (paddingLength fs_) - length absNumber 
+          nZeros l = l - length absNumber 
 
--- |Returns the list of frames numbers
+-- | Returns the list of frames numbers
 frameRange :: FileSequence -> [Int]
 frameRange fs_ = toList $ frames fs_
 
--- |Returns the list of all frame names
+-- | Returns the list of all frame names
 frameList :: FileSequence -> [PathString]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
--- |Arbitrary FileSequence generator
+-- | Arbitrary FileSequence generator
 instance Arbitrary FileSequence where
    arbitrary = do
      frames_ <- listOf1 arbitrary :: Gen [Int]
@@ -208,24 +236,24 @@ instance Arbitrary FileSequence where
      pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      let fs = FileSequence
                 { frames = foldl addFrame [] frames_ 
-                , paddingLength = plen_ 
-                , path = pathName_ --  FIXME : arbitrary for file path
+                , padding = plen_
+		, path = pathName_ 
                 , name = "test" -- FIXME : arbitrary for names
                 , ext = "dpx" -- same as above
                 , frameSep = frameSep_
                 , extSep = "."}
      return fs --`suchThat` paddingIsCoherent 
-     where possiblePadding frms= 
+     where possiblePadding frms = 
                 if differs $ countDigits frms
-                  then Nothing : digitRange frms
+                  then PaddingMax 1 : digitRange frms
                   else digitRange frms 
-           digitRange f = [Just x | x <- [maxDigit f .. 2 * maxDigit f]]
+           digitRange f = [PaddingFixed x | x <- [maxDigit f .. 2 * maxDigit f]]
            maxDigit = maximum . countDigits
            countDigits = map (length.show.abs) 
            differs (x:xs) = not $ all (==x) xs
            differs [] = True
 
--- |Split a sequence into a list of sequence having contiguous frames (no holes)
+-- | Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequence -> [FileSequence]
 splitNonContiguous fs = map buildSeq $ frames fs 
     where buildSeq (ff, lf) = fs {frames = fromRange ff lf}

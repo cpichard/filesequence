@@ -130,9 +130,9 @@ formatSequence fs_ path_ padding_ =
 -- |Format the structure in a string readable by nuke
 formatAsNukeSequence :: Bool -> FileSequence -> PathString
 formatAsNukeSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
-    where formatFrame fs = case paddingLength fs of
-                            Just pl -> fromString $ replicate pl '#'
-                            Nothing -> "#"
+    where formatFrame fs = case padding fs of
+                            PaddingFixed pl -> fromString $ replicate pl '#'
+                            PaddingMax _ -> "#"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
@@ -140,9 +140,9 @@ formatAsNukeSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 -- |Format the filesequence as a printf compatible string
 formatAsPrintfSequence :: Bool -> FileSequence -> PathString
 formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
-    where formatFrame fs = case paddingLength fs of 
-                             Just pl -> fromString $ "%0" ++ show pl ++ "d"
-                             Nothing -> "%d"
+    where formatFrame fs = case padding fs of 
+                             PaddingFixed pl -> fromString $ "%0" ++ show pl ++ "d"
+                             PaddingMax _ -> "%d"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
@@ -151,9 +151,9 @@ formatAsPrintfSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
 formatAsRvSequence :: Bool -> FileSequence -> PathString
 formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
     where formatFrame fs = fromString $ show (firstFrame (frames fs)) ++ "-" ++ show (lastFrame (frames fs)) ++ fixedPadding fs
-          fixedPadding fs = case paddingLength fs of
-                            Just pl -> fromString $ replicate pl '@'
-                            Nothing -> "#"
+          fixedPadding fs = case padding fs of
+                            PaddingFixed pl -> fromString $ replicate pl '@'
+                            PaddingMax _ -> "#"
           formatPath
              | fullpath_ = path
              | otherwise = const ""
