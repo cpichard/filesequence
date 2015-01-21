@@ -57,6 +57,44 @@ test_utf8 = assertEqual a b
                     , frameSep = "."
                     , extSep = "."}
 
+-- | Test minus zero ex: myfile.-0.tmp
+test_minusZero :: IO ()
+test_minusZero = assertEqual a b
+    where b = fileSequenceFromName "test-0.0a1"
+          a = Nothing 
+
+-- | Series of tests with the following case
+-- | "a sequence can't have the same frame twice"
+sameFrameTwice :: [PathString]
+sameFrameTwice = ["b.01.t", "b.10.tmp", "b.010.tmp"]
+
+-- | If there is the same frame twice in a list, it is sure that the padding is
+--   different so we should find two distinct sequences
+test_sameFrameTwice :: IO ()
+test_sameFrameTwice = do assertBool $ length b == 2
+		         assertNotEqual c d 
+    where b = fileSequencesFromList sameFrameTwice 
+	  c = isElementOf 10 $ frames (head b)
+	  d = isElementOf 10 $ frames (last b)
+
+-- |  
+test_frameRestitution :: IO ()
+test_frameRestitution = do assertEqual a b
+    where a = sort sameFrameTwice 
+	  b = sort $ concatMap frameList $ fileSequencesFromList a
+
+-- | Extended padding
+test_extendedPadding :: IO ()
+test_extendedPadding = assertEqual a b
+    where a = fileSequencesFromList ["b.01.t", "b.10.tmp", "b.100.tmp"]
+	  b = [FileSequence 
+		{ frames = [(1,1),(10,10),(100,100)]
+		, paddingLength = Just 2 
+		, path = ""
+		, name = "b"
+		, ext = "tmp"
+		, frameSep = "."
+		, extSep = "."}]
 
 -- | Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool

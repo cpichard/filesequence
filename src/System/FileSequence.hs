@@ -65,7 +65,7 @@ extSepReg = "(\\.)"
 
 -- * Regex used to find sequences
 fileInSeq :: PathString
-fileInSeq = concatPathString ["(.*?)", frameSepReg, "(-?[0-9]+)", extSepReg, "([a-zA-Z0-9]+)$"]
+fileInSeq = concatPathString ["(.*?)", frameSepReg, "((-?)([0-9]+))", extSepReg, "([a-zA-Z0-9]+)$"]
 
 -- * Sequence in printf format
 seqInPrintf :: PathString
@@ -138,20 +138,20 @@ fileSequencesFromList nameList = findseq nameList []
 fileSequenceFromName :: PathString -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
-        [[ _ , fullName, sep1, num, sep2, ext_ ]]
-            -> Just  FileSequence  
-                        { frames = addFrame [] frameNo
-                        , paddingLength = deducePadding 
-                        , path = path_
-                        , name = fullName
-                        , ext = ext_
-                        , frameSep = sep1
-                        , extSep = sep2 
-                        } 
-                where frameNo = read (toString num) :: Int
-                      deducePadding
-                            | frameNo >= 0 = Just (length (toString num))
-                            | otherwise = Just $ length (toString num) - 1
+        [[ _ , fullName, sep1, num, minus, numbers, sep2, ext_ ]]
+            -> if frameNo == 0 && minus == "-"
+		 then Nothing
+		 else Just FileSequence  
+				{ frames = addFrame [] frameNo
+				, paddingLength = deducePadding 
+				, path = path_
+				, name = fullName
+				, ext = ext_
+				, frameSep = sep1
+				, extSep = sep2 
+				} 
+                where frameNo = read (toString num) :: Int 
+                      deducePadding = Just $ length (toString numbers)
         _   -> Nothing
 
     where (path_, filename) = splitDirectoryAndFile name_
