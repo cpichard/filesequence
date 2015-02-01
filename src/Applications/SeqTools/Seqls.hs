@@ -34,7 +34,7 @@ defaultOptions = SeqLsData
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
     , recursive = False
-    , minFrames = 1
+    , minFrames = 3
     , contiguous = False
     , followLink = True
     , filterExt = []
@@ -54,7 +54,7 @@ options =
         (ReqArg (updateFormat.setFormatFromString) "[nuke|rv|printf]")
          "Formating style of the output"
     , Option "j" ["min"]
-        (ReqArg (\x opt -> opt {minFrames=read x}) "1")
+        (ReqArg (\x opt -> opt {minFrames=read x}) "3")
          "Minimal number of frames for a sequence"
     , Option "g" ["fullpath"]
         (NoArg (updateFormat (setFullPath True)))
