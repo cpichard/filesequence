@@ -1,8 +1,8 @@
 name:       filesequence
 version:    0.1
+synopsis:      Library and tools to manipulate sequences of files
 build-type: Simple
 cabal-version: >= 1.8
-build-depends:     base >= 3 && < 5
 Library
   exposed-modules:  System.FileSequence,
                     System.FileSequence.Manip,
@@ -18,7 +18,7 @@ Library
   hs-source-dirs: src/
 
 executable seqls
-  build-depends: base, utf8-string, regex-pcre-builtin, filepath, directory, filesequence
+  build-depends: base, utf8-string, regex-pcre-builtin, filepath, directory, filesequence, bytestring
   ghc-options:  -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqls.hs
