@@ -1,7 +1,7 @@
 name:       filesequence
 version:    0.1
-synopsis:      Library and tools to manipulate sequences of files
-build-type: Simple
+synopsis:   Library and tools to manipulate sequences of files
+build-type: Custom
 cabal-version: >= 1.8
 Library
   exposed-modules:  System.FileSequence,
@@ -13,12 +13,13 @@ Library
                     System.FileSequence.Internal
   build-depends: base, posix-paths, HTF, utf8-string
                , regex-pcre-builtin, filepath, directory
-               , parallel, unix, bytestring, cryptohash, QuickCheck
+               , parallel, unix, bytestring, cryptohash, QuickCheck, template-haskell
   ghc-options:      -Wall -O2 -rtsopts 
   hs-source-dirs: src/
 
 executable seqls
-  build-depends: base, utf8-string, regex-pcre-builtin, filepath, directory, filesequence, bytestring
+  build-depends: base, utf8-string, regex-pcre-builtin, 
+                 filepath, directory, filesequence, bytestring, template-haskell
   ghc-options:  -Wall -O2 -rtsopts 
   hs-source-dirs:  src/Applications/SeqTools/
   main-is:  Seqls.hs

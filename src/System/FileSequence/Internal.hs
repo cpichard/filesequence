@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, TypeSynonymInstances #-}
+{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface, OverloadedStrings, TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.FileSequence.Internal where
 
@@ -6,7 +6,7 @@ import Foreign
 
 import System.Posix.FilePath
 import Control.Applicative
-import Control.Monad (forM, when)
+import Control.Monad (forM, when, liftM)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BC
 import System.Posix.Files.ByteString
@@ -14,7 +14,19 @@ import System.Posix.Directory.Traversals
 import Test.QuickCheck
 import System.Posix.IO.ByteString 
 import Control.Exception
+import Language.Haskell.TH
+import Language.Haskell.TH.Syntax (liftString)
+import System.Environment (getEnvironment)
 import System.IO.Error
+
+-- | Get project version via template haskell
+lookupVersionEnv :: Q Exp 
+lookupVersionEnv = do
+  version <- liftM (lookup "GITVERSION") (runIO getEnvironment)
+  case version of
+    Just v ->  liftString v
+    Nothing -> liftString ""
+
 
 -- |FileSequence path type
 -- |We use raw bytes to process the path information

@@ -1,4 +1,5 @@
--- |seqls command.
+{-# LANGUAGE TemplateHaskell #-}
+-- | seqls command.
 -- Search and display sequences found in a given path or from a list of files
 
 module Main ( main ) where
@@ -15,7 +16,11 @@ import Data.ByteString.UTF8 (fromString)
 
 -- TODO add full status options
 -- TODO add ordering options by size, etc
--- TODO verbose
+
+-- | Generate a string from the environment variable GITVERSION
+-- at compile time
+gitVersion :: String
+gitVersion = $(lookupVersionEnv)
 
 -- | Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
@@ -129,7 +134,7 @@ showFoundSequences opts = do
 -- | Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
 showErrorMessage =
-  putStrLn $ usageInfo "seqls - list sequences of files" options
+  putStrLn $ usageInfo ("seqls version " ++ gitVersion ++ "\nList sequences of files") options
 
 main :: IO ()
 main = do
