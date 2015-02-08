@@ -14,19 +14,7 @@ import System.Posix.Directory.Traversals
 import Test.QuickCheck
 import System.Posix.IO.ByteString 
 import Control.Exception
-import Language.Haskell.TH
-import Language.Haskell.TH.Syntax (liftString)
-import System.Environment (getEnvironment)
 import System.IO.Error
-
--- | Get project version via template haskell
-lookupVersionEnv :: Q Exp 
-lookupVersionEnv = do
-  version <- liftM (lookup "GITVERSION") (runIO getEnvironment)
-  case version of
-    Just v ->  liftString v
-    Nothing -> liftString ""
-
 
 -- |FileSequence path type
 -- |We use raw bytes to process the path information

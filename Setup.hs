@@ -7,6 +7,7 @@ import System.Process
 main = defaultMainWithHooks simpleUserHooks { preBuild = preBuildHook }
 
 -- | Pre build hook to pass the git revision to the program
+--  via environment variable and template haskell
 preBuildHook :: Args -> BuildFlags -> IO HookedBuildInfo
 preBuildHook arg bflags = do
   gitversion <- readProcess "git" ["describe","--abbrev=10", "--dirty", "--always", "--tags"] ""

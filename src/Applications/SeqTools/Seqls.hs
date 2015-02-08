@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 -- | seqls command.
 -- Search and display sequences found in a given path or from a list of files
 
@@ -13,14 +12,10 @@ import System.Console.GetOpt
 import qualified Data.ByteString.Char8 as BC
 import Control.Monad (liftM)
 import Data.ByteString.UTF8 (fromString)
+import CompileTimeInfos (gitVersion)
 
 -- TODO add full status options
 -- TODO add ordering options by size, etc
-
--- | Generate a string from the environment variable GITVERSION
--- at compile time
-gitVersion :: String
-gitVersion = $(lookupVersionEnv)
 
 -- | Seqls datas, comming from the command line arguments
 data SeqLsData = SeqLsData
