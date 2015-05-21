@@ -54,6 +54,8 @@ getRecursiveDirs topdir = do
       else return []
   return $ topdir: concat paths
 
+
+
 -- |Split directories from files
 splitPaths :: [PathString] -> IO ([PathString], [PathString])
 splitPaths []     = return ([],[])
@@ -63,6 +65,24 @@ splitPaths (x:xs) = do
   return (conc de x yd, conc (not de) x yf)
   where conc True x' xs' = x':xs'
         conc False _ xs' = xs'
+
+-- | Traverse folders and apply a function to the list of files 
+--   contained in each of them 
+visitFolders :: Bool                    -- Recursive
+             -> [PathString]            -- Remaining folders
+             -> ([PathString] -> IO ()) -- Function to apply, take a list of files
+             -> IO ()
+visitFolders _ [] _ = return ()
+visitFolders recurse (x:xs) func = do
+  dirTypesAndNames <- getDirectoryContents x 
+  let dots = [".", ".."] :: [PathString]
+      properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
+  (dirs, files) <- splitPaths $ map ( x </> ) properNames
+  func files
+  let d = if recurse
+            then dirs++xs
+            else xs
+  visitFolders recurse d func
 
 -- |Operations on different kind of string used
 

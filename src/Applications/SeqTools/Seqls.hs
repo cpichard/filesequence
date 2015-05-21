@@ -90,22 +90,12 @@ processOptions optFunc = addDirectoryList processedOptions
             [] -> opt_ -- by default pathList = "."
             _  -> opt_ { pathList = n_ }
 
--- | Finally force the printing of the sequences
-showFoundSequences :: SeqLsData -> IO ()
-showFoundSequences opts = do
-  -- partition directories and files from command line
-  (directories, files) <- splitPaths $ map fromString (pathList opts)
-  -- in recursive mode add sub directories 
-  alldirs <-
-      if recursive opts
-        then liftM concat (mapM getRecursiveDirs directories)
-        else return directories
-  -- find sequences in directories passed as arguments 
-  sequencesInDirs  <- fileSequencesFromPaths alldirs
-  -- find sequences in files passed as arguments
+-- | Extract and display sequences from a list of files 
+showSequencesInFiles :: SeqLsData -> [PathString] -> IO ()
+showSequencesInFiles _ [] = return () 
+showSequencesInFiles opts files = do
   sequencesInFiles <- fileSequencesFromFiles files
-  -- apply filters to select required sequences
-  let allSequences = filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles ++ sequencesInDirs
+  let allSequences = filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
       allRequired = if contiguous opts
                       then concatMap splitNonContiguous allSequences
                       else allSequences
@@ -119,12 +109,22 @@ showFoundSequences opts = do
         mapM_ (putStrLn.formatWithStats) zipped 
     else
         mapM_ (putStrLn.formatSimple) allRequired 
-
+    
   where formatWithStats = formatResultWithStats (outputFormat opts) 
         formatSimple = formatSimpleResults (outputFormat opts)
         filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
         filterExtension [] = id
         filterExtension exts = filter (\fs -> (ext fs) `elem` exts)
+
+-- | Finally force the printing of the sequences
+runSeqls :: SeqLsData -> IO ()
+runSeqls opts = do
+  -- partition directories and files from command line
+  (folders, files) <- splitPaths $ map fromString (pathList opts)
+  -- First display the files
+  showSequencesInFiles opts files 
+  -- then display each folder one after the other
+  visitFolders (recursive opts) folders (showSequencesInFiles opts)
 
 -- | Called when an option in the command line is not recognized
 showErrorMessage :: IO ()
@@ -136,7 +136,7 @@ main = do
   args <- getArgs
   let cmdlopts = getOpt Permute options args
   case cmdlopts of
-    (o, n, [])  -> showFoundSequences (processOptions o n)
+    (o, n, [])  -> runSeqls (processOptions o n)
     _           -> showErrorMessage
 
 
