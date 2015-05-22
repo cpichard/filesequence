@@ -94,7 +94,7 @@ processOptions optFunc = addDirectoryList processedOptions
 showSequencesInFiles :: SeqLsData -> [PathString] -> IO ()
 showSequencesInFiles _ [] = return () 
 showSequencesInFiles opts files = do
-  sequencesInFiles <- fileSequencesFromFiles files
+  sequencesInFiles <- fileSequencesFromFiles files -- can throw ?
   let allSequences = filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
       allRequired = if contiguous opts
                       then concatMap splitNonContiguous allSequences
@@ -103,8 +103,8 @@ showSequencesInFiles opts files = do
   if showStats (outputFormat opts)
     then do
         allRequiredStats <- if (followLink opts)
-                then mapM fileSequenceStatus allRequired
-                else mapM fileSequenceSymlinkStatus allRequired
+                then mapM fileSequenceStatus allRequired        -- can throw
+                else mapM fileSequenceSymlinkStatus allRequired -- can throw
         let zipped = zip allRequired allRequiredStats
         mapM_ (putStrLn.formatWithStats) zipped 
     else

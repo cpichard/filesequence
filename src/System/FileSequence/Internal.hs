@@ -15,6 +15,7 @@ import Test.QuickCheck
 import System.Posix.IO.ByteString 
 import Control.Exception
 import System.IO.Error
+import System.IO (hPutStr, stderr)
 
 -- |FileSequence path type
 -- |We use raw bytes to process the path information
@@ -74,16 +75,23 @@ visitFolders :: Bool                    -- Recursive
              -> IO ()
 visitFolders _ [] _ = return ()
 visitFolders recurse (x:xs) func = do
-  dirTypesAndNames <- getDirectoryContents x 
+  dirTypesAndNames <- catch (getDirectoryContents x) (handleExcept []) -- Can Throw
   let dots = [".", ".."] :: [PathString]
       properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
-  (dirs, files) <- splitPaths $ map ( x </> ) properNames
-  func files
+  (dirs, files) <- catch (splitPaths $ map ( x </> ) properNames) (handleExcept ([],[]))
+  catch (func files) (handleExcept ())
   let d = if recurse
             then dirs++xs
             else xs
   visitFolders recurse d func
+  where handleExcept a e = do
+            let err | isPermissionError e  = ": permission error"
+                    | isDoesNotExistError e  = ": does not exist"
+                    | otherwise = show (e :: IOException)
+            hPutStr stderr ( pathToConsole x ++ err ++ "\n")
+            return a
 
+ 
 -- |Operations on different kind of string used
 
 -- |Concat path string
