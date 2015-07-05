@@ -120,7 +120,7 @@ showSequencesInFiles opts files = do
 runSeqls :: SeqLsData -> IO ()
 runSeqls opts = do
   -- partition directories and files from command line
-  (folders, files) <- splitPaths $ map fromString (pathList opts)
+  (folders, files) <- filterDirsAndFiles $ map fromString (pathList opts)
   -- First display the files
   showSequencesInFiles opts files 
   -- then display each folder one after the other

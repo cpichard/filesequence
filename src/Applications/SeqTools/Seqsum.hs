@@ -47,7 +47,7 @@ processOptions optFunc = addDirectoryList processedOptions
 
 runSeqSum :: SeqSumData -> IO ()
 runSeqSum opts = do
-  (directories, files) <- splitPaths $ map fromString (pathList opts)
+  (directories, files) <- filterDirsAndFiles $ map fromString (pathList opts)
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)

@@ -13,6 +13,7 @@ import System.IO
 import Control.Exception
 import Control.Monad
 import System.FileSequence.Internal (consoleToPath)
+
 -- TODO verbose mode
 -- TODO option to avoid overwritting an existing file
 -- TODO async mode, multiple copies at the same time

@@ -220,14 +220,4 @@ padBy :: Int    -- ^ Pad to a multiple of this number
       -> ConsoleString   
 padBy n c s = replicate (mod (- length s) n) c ++ s
 
--- |Returns partitions of contiguous frames
--- ex: [1,2,3,6,7,9] -> [(1,3), (6,7), (9,9]
---groupContiguousFrames :: [Int] -> [(Int, Int)]
---groupContiguousFrames (x:xs) = grpCon x x xs []
---   where grpCon fir las (x':xs') ret = if las+1 == x'
---                                        then grpCon fir x' xs' ret
---                                        else grpCon x' x' xs' (ret++[(fir, las)])      
---         grpCon fir las _ ret = ret ++ [(fir, las)]
---groupContiguousFrames _      = []  
-
 

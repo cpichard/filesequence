@@ -38,8 +38,7 @@ module System.FileSequence (
     splitNonContiguous, 
     -- * Export internal structures
     PathString,
-    splitPaths,
-
+    filterDirsAndFiles
 ) where
 
 import System.Posix.FilePath
@@ -182,7 +181,7 @@ fileSequenceFromName name_ =
 				    | otherwise = PaddingMax numberLength
         _   -> Nothing
 
-    where (path_, filename) = splitDirectoryAndFile name_
+    where (path_, filename) = dirAndFileName name_
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- | Decode the filesequence from a printf format and the first and last frames 
@@ -201,7 +200,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
                     }
       _ -> Nothing
 
-    where (path_, filename) = splitDirectoryAndFile name_
+    where (path_, filename) = dirAndFileName name_
           regResult = filename =~ seqInPrintf :: [[ByteString]]
 
 -- | Returns the filename of the frame number

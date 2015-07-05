@@ -1,12 +1,12 @@
-{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface, OverloadedStrings, TypeSynonymInstances #-}
+{-# LANGUAGE OverloadedStrings, TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.FileSequence.Internal where
 
 import Foreign
-
 import System.Posix.FilePath
+import System.Posix.Directory.Foreign
 import Control.Applicative
-import Control.Monad (forM, when, liftM)
+import Control.Monad (forM, when)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BC
 import System.Posix.Files.ByteString
@@ -16,6 +16,10 @@ import System.Posix.IO.ByteString
 import Control.Exception
 import System.IO.Error
 import System.IO (hPutStr, stderr)
+
+--------------------------------------------------------------------------------
+-- |Operations on the different kinds of string used
+--------------------------------------------------------------------------------
 
 -- |FileSequence path type
 -- |We use raw bytes to process the path information
@@ -32,19 +36,45 @@ instance Arbitrary PathString where
 -- instance IsString BC.ByteString
 -- Defined in ‘Data.ByteString.Internal’
 
--- Displayed string 
--- We use UTF8 haskell String to display the results
+-- |String type used for display: Unicode haskell String
 type ConsoleString = String
 
--- |Split filesequence name
-splitDirectoryAndFile :: PathString -> (PathString, PathString)
-splitDirectoryAndFile x = (BC.reverse b, BC.reverse a)
+-- |Concat path string
+concatPathString :: [PathString] -> PathString
+concatPathString = BS.concat 
+
+-- |Concat console string
+concatConsoleString :: [ConsoleString] -> ConsoleString
+concatConsoleString = concat
+
+-- |Convert string used in a console to string used for paths
+consoleToPath :: ConsoleString -> PathString
+consoleToPath = BC.pack
+
+-- |Convert string used for paths to string used in console
+pathToConsole :: PathString -> ConsoleString
+pathToConsole = BC.unpack
+
+-- |Convert a string used for path to an standard haskell string 
+pathToString :: PathString -> String
+pathToString = BC.unpack
+
+-- |Test if a path is a directory
+isRawDir :: PathString -> IO Bool
+isRawDir f = isDirectory <$> getFileStatus f
+
+--------------------------------------------------------------------------------
+-- | File system accessories functions
+--------------------------------------------------------------------------------
+
+-- |Split filesequence name == dir and base name
+dirAndFileName :: PathString -> (PathString, PathString)
+dirAndFileName x = (BC.reverse b, BC.reverse a)
     where (a,b) = BC.break (=='/') $ BC.reverse x
 
--- | From Real world haskell
+-- |Recursive directories (from Real world haskell)
 getRecursiveDirs :: PathString -> IO [PathString]
 getRecursiveDirs topdir = do
---    -- FIXME : getDirectoryContents is not efficient here, try to use readDirStream
   namesAndTypes <- getDirectoryContents topdir
   let properNames = filter ((`notElem` [".", ".."]).snd) namesAndTypes
   paths <- forM properNames $ \(_,name_) -> do
@@ -55,20 +85,8 @@ getRecursiveDirs topdir = do
       else return []
   return $ topdir: concat paths
 
-
-
--- |Split directories from files
-splitPaths :: [PathString] -> IO ([PathString], [PathString])
-splitPaths []     = return ([],[])
-splitPaths (x:xs) = do
-  de <- isRawDir x
-  (yd, yf) <- splitPaths xs
-  return (conc de x yd, conc (not de) x yf)
-  where conc True x' xs' = x':xs'
-        conc False _ xs' = xs'
-
--- | Traverse folders and apply a function to the list of files 
---   contained in each of them 
+-- |Traverse folders and apply a function to the list of files contained 
+-- in each of them 
 visitFolders :: Bool                    -- Recursive
              -> [PathString]            -- Remaining folders
              -> ([PathString] -> IO ()) -- Function to apply, take a list of files
@@ -76,9 +94,12 @@ visitFolders :: Bool                    -- Recursive
 visitFolders _ [] _ = return ()
 visitFolders recurse (x:xs) func = do
   dirTypesAndNames <- catch (getDirectoryContents x) (handleExcept []) -- Can Throw
-  let dots = [".", ".."] :: [PathString]
-      properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
-  (dirs, files) <- catch (splitPaths $ map ( x </> ) properNames) (handleExcept ([],[]))
+  --let dots = [".", ".."] :: [PathString]
+  --    properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
+  --(dirs, files) <- catch (filterDirsAndFiles $ map ( x </> ) properNames) (handleExcept ([],[]))
+  -- FIXME : the following is a test with a faster function, if it happens to work fine, 
+  -- remove the above commented code
+  let (dirs, files) = filterDirsAndFilesFast x dirTypesAndNames [] []
   catch (func files) (handleExcept ())
   let d = if recurse
             then dirs++xs
@@ -91,30 +112,33 @@ visitFolders recurse (x:xs) func = do
             hPutStr stderr ( pathToConsole x ++ err ++ "\n")
             return a
 
- 
--- |Operations on different kind of string used
+-- |Split files and directories in two lists. This function uses the 
+-- standard getStatus function.
+filterDirsAndFiles :: [PathString] -> IO ([PathString], [PathString])
+filterDirsAndFiles []     = return ([],[])
+filterDirsAndFiles (x:xs) = do
+  de <- isRawDir x
+  (yd, yf) <- filterDirsAndFiles xs
+  return (conc de x yd, conc (not de) x yf)
+  where conc True x' xs' = x':xs'
+        conc False _ xs' = xs'
 
--- |Concat path string
-concatPathString :: [PathString] -> PathString
-concatPathString = BS.concat 
+-- |Split files and directories in two lists. This function uses the
+-- direntry information instead of the status to determine if an entry 
+-- is a file or a dir.
+filterDirsAndFilesFast :: PathString           -- root
+                   -> [(DirType, PathString)]  -- list of dirtypes and name returned by getDirectoryContents
+                   -> [PathString]             -- directories found (used in internal recursion) 
+                   -> [PathString]             -- files found (used in internal recursion)
+                   -> ([PathString], [PathString]) -- returned dirs and files
+filterDirsAndFilesFast _ [] d f = (d, f)
+filterDirsAndFilesFast root (x:xs) d f 
+  | fst x == DirType 8 || fst x == DirType 10 || fst x == DirType 0 || fst x == DirType 14 
+     = filterDirsAndFilesFast root xs d (root </> snd x : f)
+  | fst x == DirType 4 && (snd x `notElem` [".",".."])
+     = filterDirsAndFilesFast root xs (root </> snd x : d) f
+  | otherwise = filterDirsAndFilesFast root xs d f
 
--- |Concat console string
-concatConsoleString :: [ConsoleString] -> ConsoleString
-concatConsoleString = concat
-
--- Conversion
-consoleToPath :: ConsoleString -> PathString
-consoleToPath = BC.pack
-
-pathToConsole :: PathString -> ConsoleString
-pathToConsole = BC.unpack
-
-pathToString :: PathString -> String
-pathToString = BC.unpack
-
---
-isRawDir :: PathString -> IO Bool
-isRawDir f = isDirectory <$> getFileStatus f
 
 -- |Copy files for internal types
 copyFile :: PathString -> PathString -> IO ()
@@ -126,7 +150,7 @@ copyFile fromPath toPath =
                      ignoreIOExceptions $ copyPermissions fdFrom fdTmp
                      closeFd fdTmp
                      rename tmpFdPath toPath
-           tmpFdPath = concatPathString [toPath, ".copyFile.tmp"]
+           tmpFdPath = concatPathString [toPath, ".copyFile.tmp"] -- TODO add pid and remove case
            openTmp = openFd tmpFdPath WriteOnly (Just 0o600) defaultFileFlags
            cleanTmp fdTmp'
                 = do ignoreIOExceptions $ closeFd fdTmp'
@@ -141,3 +165,5 @@ copyFile fromPath toPath =
            copyPermissions fdFrom' fdTmp' = do
               statFrom <- getFdStatus fdFrom'
               setFdMode fdTmp' (fileMode statFrom)
+
+
