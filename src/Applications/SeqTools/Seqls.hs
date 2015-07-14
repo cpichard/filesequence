@@ -10,15 +10,18 @@ import System.FileSequence.Internal
 import System.Environment
 import System.Console.GetOpt
 import qualified Data.ByteString.Char8 as BC
-import Control.Monad (liftM)
 import Data.ByteString.UTF8 (fromString)
 import CompileTimeInfos (gitVersion)
+import Data.List (sortBy)
 
 -- TODO add full status options
 -- TODO add ordering options by size, etc
 
--- | Seqls datas, comming from the command line arguments
-data SeqLsData = SeqLsData
+
+data SeqLsSortBy = ByNothing | ByName deriving Show
+
+-- |Seqls datas, coming from the command line arguments
+data SeqLsOptions = SeqLsOptions
     { outputFormat    :: FormatingOptions
     , pathList        :: [String]
     , recursive       :: Bool
@@ -26,11 +29,13 @@ data SeqLsData = SeqLsData
     , contiguous      :: Bool
     , followLink      :: Bool
     , filterExt       :: [PathString]
+    , showVersion     :: Bool
+    , sortOption      :: SeqLsSortBy
     } deriving Show
 
--- | Default seqls datas
-defaultOptions :: SeqLsData
-defaultOptions = SeqLsData
+-- |Default seqls datas
+defaultOptions :: SeqLsOptions
+defaultOptions = SeqLsOptions
     { outputFormat = defaultFormatingOptions
     , pathList = ["."]
     , recursive = False
@@ -38,16 +43,17 @@ defaultOptions = SeqLsData
     , contiguous = False
     , followLink = True
     , filterExt = []
+    , showVersion = False
+    , sortOption = ByNothing
     }
 
--- | Extract extensions from a string and copy them to seqlsdata
-setFilterExtFromString :: String -> SeqLsData -> SeqLsData
+-- |Extract extensions from a string and copy them to seqlsoptions
+setFilterExtFromString :: String -> SeqLsOptions -> SeqLsOptions
 setFilterExtFromString s f = f {filterExt = extListBS}
   where extListBS = BC.split ',' $ consoleToPath s 
 
-
--- | List of options modifiers
-options :: [OptDescr (SeqLsData -> SeqLsData)]
+-- |List of options modifiers
+options :: [OptDescr (SeqLsOptions -> SeqLsOptions)]
 options =
     [
       Option "f" ["format"]
@@ -75,14 +81,20 @@ options =
        (NoArg (\opt -> opt {followLink=False}))
        "Do not follow symlinks"
     , Option "e" ["ext"]
-       (ReqArg setFilterExtFromString "exr,dpx,jpg")
+       (ReqArg setFilterExtFromString "exr,dpx,jpg,...")
        "Filter by extension, comma separated list of extensions"    
+    , Option [] ["version"]
+       (NoArg (\opt -> opt {showVersion=True}))
+       "Display seqls version" 
+    , Option "S" ["sort"]
+       (NoArg (\opt -> opt {sortOption=ByName}))
+       "Sort sequences by name" 
     ]
     where updateFormat f opts = opts {outputFormat= f (outputFormat opts)}
 
 
--- | Process the options modifiers
-processOptions :: [SeqLsData -> SeqLsData] -> [String] -> SeqLsData
+-- |Process the options modifiers
+processOptions :: [SeqLsOptions -> SeqLsOptions] -> [String] -> SeqLsOptions
 processOptions optFunc = addDirectoryList processedOptions
   where processedOptions = foldl (flip id) defaultOptions optFunc
         addDirectoryList opt_ n_ =
@@ -90,12 +102,12 @@ processOptions optFunc = addDirectoryList processedOptions
             [] -> opt_ -- by default pathList = "."
             _  -> opt_ { pathList = n_ }
 
--- | Extract and display sequences from a list of files 
-showSequencesInFiles :: SeqLsData -> [PathString] -> IO ()
+-- |Extract and display sequences from a list of files 
+showSequencesInFiles :: SeqLsOptions -> [PathString] -> IO ()
 showSequencesInFiles _ [] = return () 
 showSequencesInFiles opts files = do
   sequencesInFiles <- fileSequencesFromFiles files -- can throw ?
-  let allSequences = filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
+  let allSequences = sortSequences (sortOption opts) $ filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
       allRequired = if contiguous opts
                       then concatMap splitNonContiguous allSequences
                       else allSequences
@@ -115,21 +127,31 @@ showSequencesInFiles opts files = do
         filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
         filterExtension [] = id
         filterExtension exts = filter (\fs -> (ext fs) `elem` exts)
+        sortSequences ByName  = sortBy (\a b -> compare (name a) (name b))
+        sortSequences ByNothing = id
 
--- | Finally force the printing of the sequences
-runSeqls :: SeqLsData -> IO ()
-runSeqls opts = do
-  -- partition directories and files from command line
-  (folders, files) <- filterDirsAndFiles $ map fromString (pathList opts)
-  -- First display the files
-  showSequencesInFiles opts files 
-  -- then display each folder one after the other
-  visitFolders (recursive opts) folders (showSequencesInFiles opts)
+-- |Finally force the printing of the sequences
+runSeqls :: SeqLsOptions -> IO ()
+runSeqls opts 
+  | showVersion opts = showVersionMessage
+  | otherwise = do
+    -- partition directories and files from command line
+    (folders, files) <- splitDirsAndFiles $ map fromString (pathList opts)
+    -- First display the files
+    showSequencesInFiles opts files 
+    -- then display each folder one after the other
+    visitFolders (recursive opts) folders (showSequencesInFiles opts)
 
--- | Called when an option in the command line is not recognized
-showErrorMessage :: IO ()
-showErrorMessage =
-  putStrLn $ usageInfo ("seqls version " ++ gitVersion ++ "\nList sequences of files") options
+-- |Called when an option in the command line is not recognized
+showHelpMessage :: IO ()
+showHelpMessage =
+  putStrLn $ usageInfo "usage: seqls [OPTION]... [FILE]... [DIRS]... \nList sequences of files" options
+
+-- |Show version
+showVersionMessage :: IO ()
+showVersionMessage = do 
+  putStrLn $ "seqls version " ++ gitVersion
+  putStrLn $ "http://github.com/cpichard/filesequence"
 
 main :: IO ()
 main = do
@@ -137,6 +159,6 @@ main = do
   let cmdlopts = getOpt Permute options args
   case cmdlopts of
     (o, n, [])  -> runSeqls (processOptions o n)
-    _           -> showErrorMessage
+    _           -> showHelpMessage
 
 
