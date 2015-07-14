@@ -16,13 +16,13 @@ import System.Posix.IO.ByteString
 import Control.Exception
 import System.IO.Error
 import System.IO (hPutStr, stderr)
-
+import Data.ByteString.UTF8 (toString)
 --------------------------------------------------------------------------------
 -- |Operations on the different kinds of string used
 --------------------------------------------------------------------------------
 
--- |FileSequence path type
--- |We use raw bytes to process the path information
+-- |Path string type
+-- We use raw bytes to store and process the path information, same as posix
 type PathString = RawFilePath
 
 -- |Generate arbitrary PathString for quickcheck testing
@@ -53,7 +53,7 @@ consoleToPath = BC.pack
 
 -- |Convert string used for paths to string used in console
 pathToConsole :: PathString -> ConsoleString
-pathToConsole = BC.unpack
+pathToConsole = toString
 
 -- |Convert a string used for path to an standard haskell string 
 pathToString :: PathString -> String
@@ -94,12 +94,12 @@ visitFolders :: Bool                    -- Recursive
 visitFolders _ [] _ = return ()
 visitFolders recurse (x:xs) func = do
   dirTypesAndNames <- catch (getDirectoryContents x) (handleExcept []) -- Can Throw
-  --let dots = [".", ".."] :: [PathString]
-  --    properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
-  --(dirs, files) <- catch (filterDirsAndFiles $ map ( x </> ) properNames) (handleExcept ([],[]))
-  -- FIXME : the following is a test with a faster function, if it happens to work fine, 
-  -- remove the above commented code
-  let (dirs, files) = filterDirsAndFilesFast x dirTypesAndNames [] []
+  let dots = [".", ".."] :: [PathString]
+      properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
+  (dirs, files) <- catch (splitDirsAndFiles $ map ( x </> ) properNames) (handleExcept ([],[]))
+  -- FIXME : the following is a test with a faster function, it is way faster on local disks but
+  -- unfortunately on shared volumes, some sequences are skipped, I still don't know why. 
+  --let (dirs, files) = splitDirsAndFilesFast x dirTypesAndNames [] []
   catch (func files) (handleExcept ())
   let d = if recurse
             then dirs++xs
@@ -114,11 +114,11 @@ visitFolders recurse (x:xs) func = do
 
 -- |Split files and directories in two lists. This function uses the 
 -- standard getStatus function.
-filterDirsAndFiles :: [PathString] -> IO ([PathString], [PathString])
-filterDirsAndFiles []     = return ([],[])
-filterDirsAndFiles (x:xs) = do
+splitDirsAndFiles :: [PathString] -> IO ([PathString], [PathString])
+splitDirsAndFiles []     = return ([],[])
+splitDirsAndFiles (x:xs) = do
   de <- isRawDir x
-  (yd, yf) <- filterDirsAndFiles xs
+  (yd, yf) <- splitDirsAndFiles xs
   return (conc de x yd, conc (not de) x yf)
   where conc True x' xs' = x':xs'
         conc False _ xs' = xs'
@@ -126,18 +126,21 @@ filterDirsAndFiles (x:xs) = do
 -- |Split files and directories in two lists. This function uses the
 -- direntry information instead of the status to determine if an entry 
 -- is a file or a dir.
-filterDirsAndFilesFast :: PathString           -- root
-                   -> [(DirType, PathString)]  -- list of dirtypes and name returned by getDirectoryContents
-                   -> [PathString]             -- directories found (used in internal recursion) 
-                   -> [PathString]             -- files found (used in internal recursion)
-                   -> ([PathString], [PathString]) -- returned dirs and files
-filterDirsAndFilesFast _ [] d f = (d, f)
-filterDirsAndFilesFast root (x:xs) d f 
-  | fst x == DirType 8 || fst x == DirType 10 || fst x == DirType 0 || fst x == DirType 14 
-     = filterDirsAndFilesFast root xs d (root </> snd x : f)
+splitDirsAndFilesFast :: PathString           -- root
+                      -> [(DirType, PathString)]  -- list of dirtypes and name returned by getDirectoryContents
+                      -> [PathString]             -- directories found (used in internal recursion) 
+                      -> [PathString]             -- files found (used in internal recursion)
+                      -> ([PathString], [PathString]) -- returned dirs and files
+splitDirsAndFilesFast _ [] d f = (d, f)
+splitDirsAndFilesFast root (x:xs) d f 
+  | fst x == DirType 8 || fst x == DirType 10 || -- FIXME: Finish testing different dirtype on different 
+    fst x == DirType 0 || fst x == DirType 14 || -- kind of volumes, filesystems.
+    fst x == DirType 2 || fst x == DirType 6  ||
+    fst x == DirType 12
+     = splitDirsAndFilesFast root xs d (root </> snd x : f)
   | fst x == DirType 4 && (snd x `notElem` [".",".."])
-     = filterDirsAndFilesFast root xs (root </> snd x : d) f
-  | otherwise = filterDirsAndFilesFast root xs d f
+     = splitDirsAndFilesFast root xs (root </> snd x : d) f
+  | otherwise = splitDirsAndFilesFast root xs d f
 
 
 -- |Copy files for internal types

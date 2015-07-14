@@ -44,7 +44,7 @@ fileSequenceCopy fs_ path_ hand_ = do
           else let fsr_ = fs_ {path=pathDst} in do
                mapFrames tryCopyFile fs_ fsr_
                return fsr_ 
-       else throw $ mkIOError doesNotExistErrorType "does not exists" Nothing (Just (pathToString path_)) 
+      else throw $ mkIOError doesNotExistErrorType "does not exists" Nothing (Just (pathToString path_)) 
     where tryCopyFile a b = handle hand_ $ copyFile a b
 
 -- |Move all filesequence frames to the new path

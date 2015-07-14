@@ -6,7 +6,6 @@ import System.FileSequence.Format
 import System.FileSequence.SparseFrameList
 import System.Environment
 import System.Console.GetOpt
---import System.Directory
 import Control.Monad (liftM)
 import Data.ByteString.UTF8 (fromString)
 
@@ -47,7 +46,7 @@ processOptions optFunc = addDirectoryList processedOptions
 
 runSeqSum :: SeqSumData -> IO ()
 runSeqSum opts = do
-  (directories, files) <- filterDirsAndFiles $ map fromString (pathList opts)
+  (directories, files) <- splitDirsAndFiles $ map fromString (pathList opts)
   alldirs <-
       if recursive opts
         then liftM concat (mapM getRecursiveDirs directories)
