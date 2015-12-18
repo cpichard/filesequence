@@ -34,14 +34,14 @@ test_sequenceWithoutName = assertEqual a b
                     , extSep = "."}
 
 -- |Test utf8 characters
-test_utf8FromName :: IO ()
-test_utf8FromName = assertEqual a b
-    where b = fileSequenceFromName "fffèè.0003.fg"
+test_detectSpecialCharacters :: IO ()
+test_detectSpecialCharacters = assertEqual a b
+    where b = fileSequenceFromName "fffèè#$^.0003.fg"
           a = Just FileSequence 
                     { frames = [(3,3)]
                     , padding = PaddingFixed 4
                     , path = ""
-                    , name = "fffèè"
+                    , name = "fffèè#$^"
                     , ext = "fg"
                     , frameSep = "."
                     , extSep = "."}
@@ -88,14 +88,26 @@ extendPaddingSample = ["b.01.tmp", "b.10.tmp", "b.100.tmp"]
 test_extendedPadding :: IO ()
 test_extendedPadding = assertEqual a b
     where a = fileSequencesFromList extendPaddingSample
-	  b = [FileSequence 
-		{ frames = [(1,1),(10,10),(100,100)]
-		, padding = PaddingFixed 2
-		, path = ""
-		, name = "b"
-		, ext = "tmp"
-		, frameSep = "."
-		, extSep = "."}]
+          b = [FileSequence 
+                { frames = [(1,1),(10,10),(100,100)]
+                , padding = PaddingFixed 2
+                , path = ""
+                , name = "b"
+                , ext = "tmp"
+                , frameSep = "."
+                , extSep = "."}]
+
+test_paddingForFrame0 :: IO ()
+test_paddingForFrame0 = do assertEqual a b
+  where a = fileSequenceFromName "/tmp/test0.dpx"
+        b = Just FileSequence { frames = [(0,0)]
+                         , padding = PaddingMax 1
+                         , path = "/tmp/"
+                         , name = "test"
+                         , ext = "dpx"
+                         , frameSep = ""
+                         , extSep = "."}
+
 
 -- |Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool
@@ -136,8 +148,8 @@ prop_holeSize [] = nbMissing [] == nbFrames [] -- no frames at all
 prop_holeSize fs = nbMissing fs == lastFrame fs - firstFrame fs + 1 - nbFrames fs
 
 -- |Test utf8 
-test_utf8FromList :: IO ()
-test_utf8FromList = do
+test_detectSequenceInUtf8 :: IO ()
+test_detectSequenceInUtf8 = do
     assertBool $ length b == 1
     assertEqual a (head b)
     where b = fileSequencesFromList ["ffﾩﾩΠ.001.f", "ffﾩﾩΠ.002.f", "ffﾩﾩΠ.003.f"]
@@ -152,4 +164,6 @@ test_utf8FromList = do
                  }
 
 main ::IO ()
-main = htfMain htf_thisModulesTests
+main = htfMainWithArgs ["--timeout-is-success", "--max-cur-ms=4000"] htf_thisModulesTests
+
+

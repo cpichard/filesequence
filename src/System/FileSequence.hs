@@ -117,7 +117,7 @@ data FileSequence = FileSequence {
 sameSignature :: FileSequence -> FileSequence -> Bool
 sameSignature fs1 fs2 =
        name fs1 == name fs2
-    && path fs1 == path fs2
+    && path fs1 == path fs2 -- FIXME : path can point to the same directory
     && ext  fs1 == ext  fs2
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
@@ -177,7 +177,8 @@ fileSequenceFromName name_ =
                     } 
                 where frameNo = read (toString num) :: Int 
                       numberLength = length (toString numbers)
-                      deducePadding | abs frameNo < 10^(numberLength-1) = PaddingFixed numberLength
+                      deducePadding | frameNo == 0 && numberLength == 1 = PaddingMax 1
+                                    | abs frameNo < 10^(numberLength-1) = PaddingFixed numberLength
                                     | otherwise = PaddingMax numberLength
         _   -> Nothing
 
@@ -229,8 +230,7 @@ frameList fs_ = map (frameName fs_) (frameRange fs_)
 instance Arbitrary FileSequence where
    arbitrary = do
      frames_ <- listOf1 arbitrary :: Gen [Int]
-     -- Positive len_ <- arbitrary
-     plen_ <- elements $ possiblePadding frames_
+     plen_ <- elements $ detectablePadding frames_
      frameSep_ <- elements ["", ".", "_"]
      -- FIXME: test won't pass for arbitrary bytestrings, check why
      -- pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
@@ -238,21 +238,21 @@ instance Arbitrary FileSequence where
      let fs = FileSequence
                 { frames = foldl addFrame [] frames_ 
                 , padding = plen_
-                , path = "/tmp" -- pathName_ 
+                , path = "/tmp/" -- pathName_ TODO : the ending / is required, we should write a rule in case the path does not end with / or change the path comparison method so it handle correctly different string pointing to the same path
                 , name = "test" -- seqName 
                 , ext = "dpx" -- same as above
                 , frameSep = frameSep_
                 , extSep = "."}
      return fs
-     where possiblePadding frms = 
-                if differs $ countDigits frms
-                  then PaddingMax 1 : digitRange frms
-                  else digitRange frms 
-           digitRange f = [PaddingFixed x | x <- [maxDigit f .. 2 * maxDigit f]]
-           maxDigit = maximum . countDigits
+     -- write detectable padding instead of possible padding
+     -- generate a list of possible padding for this particular list of frames
+     -- this should either be PaddingMax (number of character of the min number of the seq)
+     -- or PaddingFixed (number of character > to the number of character of the max number)
+     -- We should write a function that forces this constraint
+     where detectablePadding frms = [PaddingFixed ((maxDigit frms)+1), PaddingMax (minDigit frms)]     
            countDigits = map (length.show.abs) 
-           differs (x:xs) = not $ all (==x) xs
-           differs [] = True
+           maxDigit = maximum . countDigits
+           minDigit = minimum . countDigits
            --nameIsCoherent x = BC.readInt x == Nothing 
            --                 && all ((flip BC.notElem) x) ['\n', '\0', '\t']
 
@@ -261,4 +261,4 @@ splitNonContiguous :: FileSequence -> [FileSequence]
 splitNonContiguous fs = map buildSeq $ frames fs 
     where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
 
-
+-- NOTE : does paddingFixed implies that there are numbers below 10^padding ?
