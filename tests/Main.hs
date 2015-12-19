@@ -108,9 +108,20 @@ test_paddingForFrame0 = do assertEqual a b
                          , frameSep = ""
                          , extSep = "."}
 
+test_parseBigFrameNumber :: IO ()
+test_parseBigFrameNumber = do assertNotEqual a b
+  where a = fileSequenceFromName "/tmp/test_572363626537632752765736572653765762576537652.dpx"
+        b = Just FileSequence { frames = [(660598358357825588,660598358357825588)]
+                         , padding = PaddingMax 45 -- TODO: test the property that padding max should always be inf
+                         , path = "/tmp/"             -- to the max number of digit of the frames
+                         , name = "test"
+                         , ext = "dpx"
+                         , frameSep = "_"
+                         , extSep = "."}
+
 
 -- |Frames are restitued correctly in a sparse frame sequence
-prop_sparseFrameList :: [Int] -> Bool
+prop_sparseFrameList :: [Frame] -> Bool
 prop_sparseFrameList frm = 
     let sfl = foldl addFrame [] frm in
       sort (toList sfl) == sort (nub frm) 
