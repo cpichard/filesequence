@@ -11,7 +11,7 @@ Library
                     System.FileSequence.Hash,
                     System.FileSequence.SparseFrameList,
                     System.FileSequence.Internal
-  build-depends: base, posix-paths, HTF, utf8-string
+  build-depends: base, aeson, syb, posix-paths, HTF, utf8-string
                , regex-pcre-builtin, filepath, directory
                , parallel, unix, bytestring, cryptohash, QuickCheck, template-haskell
   ghc-options:      -Wall -O2 -rtsopts 
