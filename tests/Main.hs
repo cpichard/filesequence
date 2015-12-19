@@ -121,7 +121,7 @@ test_parseBigFrameNumber = do assertNotEqual a b
 
 
 -- |Frames are restitued correctly in a sparse frame sequence
-prop_sparseFrameList :: [Frame] -> Bool
+prop_sparseFrameList :: [FrameNumber] -> Bool
 prop_sparseFrameList frm = 
     let sfl = foldl addFrame [] frm in
       sort (toList sfl) == sort (nub frm) 
