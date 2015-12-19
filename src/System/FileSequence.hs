@@ -108,7 +108,7 @@ data FileSequence = FileSequence {
     , name              :: PathString -- ^ Name or prefix of the sequence,
     , ext               :: PathString -- ^ Extension
     , frameSep          :: PathString -- ^ Char used to isolate the frame from the name
-    , extSep            :: PathString -- ^ Char used to separate the extension
+    , extSep            :: PathString -- ^ Char used to separate the extension FIXME remove, this is always dot
     } deriving (Show, Eq)
 
 -- |Returns true if two sequences have the same signature.
