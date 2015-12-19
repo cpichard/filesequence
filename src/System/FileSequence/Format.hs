@@ -24,10 +24,12 @@ import Data.List
 import Text.Printf
 import Data.Bits
 import Data.String
-
+import Data.Aeson
+import Control.Monad (mzero, liftM)
+import Data.ByteString.Lazy.UTF8 (toString)
 
 -- |Styles of sequence formating
-data SequenceFormat = Nuke | Rv | Printf
+data SequenceFormat = Nuke | Rv | Printf | Json
     deriving Show
 
 -- |Formating options
@@ -64,6 +66,7 @@ setFormatFromString :: String -> FormatingOptions -> FormatingOptions
 setFormatFromString s fo = fo {sequenceFormat = formatFromString s}
   where formatFromString "rv"     = Rv
         formatFromString "printf" = Printf
+        formatFromString "json"   = Json
         formatFromString _        = Nuke
 
 -- |Format FileSequence  similarly to ls
@@ -98,7 +101,7 @@ formatResultWithStats opts =
     \fs -> concatMap ($ fs) layoutFuncs
         where layoutFuncs = intersperse spacefunc showFuncs
               -- build a list of "show" functions depending on a condition
-              showFuncs =   consIf (showStats opts) (formatPermFunction opts . snd)
+              showFuncs =   consIf (showStats opts) (formatPermFunction . snd)
                           $ consIf (showStats opts) (formatSizesFunction opts . snd)
                           $ consIf (showStats opts) (formatFrameFunction opts . fst)
                           $ consIf (showStats opts) (formatNumberOfFrames opts . fst)
@@ -117,7 +120,9 @@ formatSequenceFunction opts =
    case sequenceFormat opts of
      Rv     -> pathToConsole . formatAsRvSequence     (fullPath opts)
      Printf -> pathToConsole . formatAsPrintfSequence (fullPath opts)
+     Json   -> formatAsJson 
      _      -> pathToConsole . formatAsNukeSequence   (fullPath opts)
+
 
 -- |Format, reconstruct the sequence name
 formatSequence :: FileSequence
@@ -158,6 +163,10 @@ formatAsRvSequence fullpath_ fs_ = formatSequence fs_ formatPath formatFrame
              | fullpath_ = path
              | otherwise = const ""
 
+-- |Convert the filesequence to a json representation
+formatAsJson ::  FileSequence -> ConsoleString
+formatAsJson fs = toString $ encode fs
+
 -- |Format the frame section
 formatFrameFunction :: FormatingOptions -> FileSequence -> ConsoleString
 formatFrameFunction _ fs = 
@@ -183,8 +192,8 @@ formatNumberOfFrames _ fs = (showp $ nbFrames (frames fs)) ++ "  " ++ (showp $ n
 
 -- |Format the file permissions
 -- Change the permission to "?" when multiple files have different permissions 
-formatPermFunction :: FormatingOptions -> FileSequenceStatus -> ConsoleString
-formatPermFunction _ =
+formatPermFunction :: FileSequenceStatus -> ConsoleString
+formatPermFunction =
     \fss -> concatMap ($(perms fss)) showFuncs
     where showPerm _  _ Nothing       = "?"
           showPerm pf c (Just perms_) =
@@ -212,6 +221,40 @@ formatMissing _ fs =
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
           tupleToString l | uncurry (==) l = show $ fst l
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)
+
+-- |Format json
+--instance FromJSON FileSequence where
+--    parseJSON (Object v) = 
+--        FileSequence <$> v .: "ranges" 
+--                     <*> return (PaddingFixed 1)
+--                     <*> (liftM stringToPath (v .: "path"))
+--                     <*> (liftM stringToPath (v .: "name"))
+--                     <*> (liftM stringToPath (v .: "ext"))   
+--                     <*> (liftM stringToPath (v .: "frame_separator"))
+--                     <*> (liftM stringToPath (v .: "ext_separator"))
+--    parseJSON _ = mzero
+
+-- | FIXME, move to padding file ??
+paddingToString p = case p of
+        PaddingFixed pl -> "%0" ++ show pl ++ "d"
+        PaddingMax _ -> "%d"
+
+instance ToJSON FileSequence where
+   toJSON (FileSequence ranges pad path name ext frame_separator ext_separator) = 
+      object [ "padding" .= (paddingToString pad)
+             , "ranges" .= ranges 
+             , "path" .= (pathToString path)
+             , "name" .= (pathToString name)
+             , "ext"  .= (pathToString ext)
+             , "frame_separator" .= (pathToString frame_separator)
+             , "ext_separator" .= (pathToString ext_separator)] 
+
+instance ToJSON FileSequenceStatus where
+    toJSON fss = object [ "perms" .= (formatPermFunction fss)
+                        , "size_max" .= show (maxSize fss)
+                        , "size_min" .= show (minSize fss)
+                        , "size" .= show (totSize fss)
+                        ]
 
 -- |Pad a string 
 padBy :: Int    -- ^ Pad to a multiple of this number

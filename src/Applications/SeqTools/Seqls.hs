@@ -57,7 +57,7 @@ options :: [OptDescr (SeqLsOptions -> SeqLsOptions)]
 options =
     [
       Option "f" ["format"]
-        (ReqArg (updateFormat.setFormatFromString) "[nuke|rv|printf]")
+        (ReqArg (updateFormat.setFormatFromString) "[nuke|rv|printf|json]")
          "Formating style of the output"
     , Option "j" ["min"]
         (ReqArg (\x opt -> opt {minFrames=read x}) "3")

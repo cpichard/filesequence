@@ -59,6 +59,9 @@ pathToConsole = toString
 pathToString :: PathString -> String
 pathToString = BC.unpack
 
+stringToPath :: String -> PathString
+stringToPath = BC.pack
+
 -- |Test if a path is a directory
 isRawDir :: PathString -> IO Bool
 isRawDir f = isDirectory <$> getFileStatus f
@@ -85,7 +88,7 @@ getRecursiveDirs topdir = do
       else return []
   return $ topdir: concat paths
 
--- |Traverse folders and apply a function to the list of files contained 
+-- |Traverse folders and execute a function to the list of files contained 
 -- in each of them 
 visitFolders :: Bool                    -- Recursive
              -> [PathString]            -- Remaining folders
