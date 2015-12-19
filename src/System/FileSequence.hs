@@ -117,8 +117,8 @@ data FileSequence = FileSequence {
 sameSignature :: FileSequence -> FileSequence -> Bool
 sameSignature fs1 fs2 =
        name fs1 == name fs2
-    && path fs1 == path fs2 -- FIXME : path can point to the same directory
-    && ext  fs1 == ext  fs2
+    && path fs1 == path fs2 -- FIXME : path can point to the same directory and
+    && ext  fs1 == ext  fs2 -- have different names, /tmp and /tmp/ point to the same path but aren't
     && frameSep fs1 == frameSep fs2
     && extSep fs1 == extSep fs2
 
