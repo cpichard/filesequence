@@ -130,7 +130,7 @@ formatSequence :: FileSequence
                -> (FileSequence -> PathString)
                -> PathString
 formatSequence fs_ path_ padding_ =
-    concatPathString [path_ fs_, name fs_, frameSep fs_, padding_ fs_, extSep fs_, ext fs_]
+    concatPathString [path_ fs_, name fs_, frameSep fs_, padding_ fs_, ".", ext fs_]
 
 -- |Format the structure in a string readable by nuke
 formatAsNukeSequence :: Bool -> FileSequence -> PathString
@@ -240,14 +240,13 @@ paddingToString p = case p of
         PaddingMax _ -> "%d"
 
 instance ToJSON FileSequence where
-   toJSON (FileSequence ranges pad path name ext frame_separator ext_separator) = 
+   toJSON (FileSequence ranges pad path name ext frame_separator) = 
       object [ "padding" .= (paddingToString pad)
              , "ranges" .= ranges 
              , "path" .= (pathToString path)
              , "name" .= (pathToString name)
              , "ext"  .= (pathToString ext)
-             , "frame_separator" .= (pathToString frame_separator)
-             , "ext_separator" .= (pathToString ext_separator)] 
+             , "frame_separator" .= (pathToString frame_separator)] 
 
 instance ToJSON FileSequenceStatus where
     toJSON fss = object [ "perms" .= (formatPermFunction fss)

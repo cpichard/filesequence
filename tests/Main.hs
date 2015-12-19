@@ -18,7 +18,7 @@ test_negativeFrames = assertEqual a b
                 , name = "test"
                 , ext = "dpx"
                 , frameSep = "."
-                , extSep = "."}] 
+                }] 
 
 -- |Sequence with no name, only numbers, is valid
 test_sequenceWithoutName :: IO ()
@@ -31,7 +31,7 @@ test_sequenceWithoutName = assertEqual a b
                     , name = ""
                     , ext = "dpx"
                     , frameSep = ""
-                    , extSep = "."}
+                    }
 
 -- |Test utf8 characters
 test_detectSpecialCharacters :: IO ()
@@ -44,7 +44,7 @@ test_detectSpecialCharacters = assertEqual a b
                     , name = "fffèè#$^"
                     , ext = "fg"
                     , frameSep = "."
-                    , extSep = "."}
+                    }
 
 
 -- |Minus zero frame (ex: myfile.-0.tmp) is invalid
@@ -95,7 +95,7 @@ test_extendedPadding = assertEqual a b
                 , name = "b"
                 , ext = "tmp"
                 , frameSep = "."
-                , extSep = "."}]
+                }]
 
 test_paddingForFrame0 :: IO ()
 test_paddingForFrame0 = do assertEqual a b
@@ -106,7 +106,7 @@ test_paddingForFrame0 = do assertEqual a b
                          , name = "test"
                          , ext = "dpx"
                          , frameSep = ""
-                         , extSep = "."}
+                         }
 
 test_parseBigFrameNumber :: IO ()
 test_parseBigFrameNumber = do assertNotEqual a b
@@ -116,8 +116,7 @@ test_parseBigFrameNumber = do assertNotEqual a b
                          , path = "/tmp/"             -- to the max number of digit of the frames
                          , name = "test"
                          , ext = "dpx"
-                         , frameSep = "_"
-                         , extSep = "."}
+                         , frameSep = "_"}
 
 
 -- |Frames are restitued correctly in a sparse frame sequence
@@ -171,7 +170,6 @@ test_detectSequenceInUtf8 = do
                  , name = "ffﾩﾩΠ"
                  , ext = "f"
                  , frameSep = "."
-                 , extSep = "."
                  }
 
 main ::IO ()

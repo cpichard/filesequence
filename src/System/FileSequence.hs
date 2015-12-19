@@ -108,7 +108,6 @@ data FileSequence = FileSequence {
     , name              :: PathString -- ^ Name or prefix of the sequence,
     , ext               :: PathString -- ^ Extension
     , frameSep          :: PathString -- ^ Char used to isolate the frame from the name
-    , extSep            :: PathString -- ^ Char used to separate the extension FIXME remove, this is always dot
     } deriving (Show, Eq)
 
 -- |Returns true if two sequences have the same signature.
@@ -120,7 +119,6 @@ sameSignature fs1 fs2 =
     && path fs1 == path fs2 -- FIXME : path can point to the same directory and
     && ext  fs1 == ext  fs2 -- have different names, /tmp and /tmp/ point to the same path but aren't
     && frameSep fs1 == frameSep fs2
-    && extSep fs1 == extSep fs2
 
 -- |Find all the file sequences inside multiple directory
 fileSequencesFromPaths :: [PathString]        -- ^ List of directories
@@ -163,7 +161,7 @@ fileSequencesFromList nameList = findseq nameList []
 fileSequenceFromName :: PathString -> Maybe FileSequence
 fileSequenceFromName name_ =
     case regResult of
-        [[ _ , fullName, sep1, num, minus, numbers, sep2, ext_ ]]
+        [[ _ , fullName, sep1, num, minus, numbers, _, ext_ ]]
             -> if frameNo == 0 && minus == "-"
                 then Nothing
                 else Just FileSequence  
@@ -173,7 +171,6 @@ fileSequenceFromName name_ =
                     , name = fullName
                     , ext = ext_
                     , frameSep = sep1
-                    , extSep = sep2 
                     } 
                 where frameNo = read (toString num) :: FrameNumber 
                       numberLength = length (toString numbers)
@@ -189,7 +186,7 @@ fileSequenceFromName name_ =
 fileSequenceFromPrintfFormat :: PathString -> FrameNumber -> FrameNumber -> Maybe FileSequence
 fileSequenceFromPrintfFormat name_ ff lf = 
     case regResult of
-      [[ _, fullName, sep1, code, sep2, ext_ ]]
+      [[ _, fullName, sep1, code, _, ext_ ]]
           -> Just FileSequence
                     { frames = [((min ff lf), (max ff lf))]
                     , padding = PaddingFixed (read (toString code) :: Int) -- FIXME %d should be Nothing
@@ -197,7 +194,6 @@ fileSequenceFromPrintfFormat name_ ff lf =
                     , name = fullName
                     , ext = ext_
                     , frameSep = sep1
-                    , extSep = sep2
                     }
       _ -> Nothing
 
@@ -207,7 +203,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
 -- |Returns the filename of the frame number
 frameName :: FileSequence -> FrameNumber -> PathString
 frameName fs_ frame_ = joinPath [path fs_, 
-        concatPathString [name fs_, frameSep fs_, fromString frameNumber, extSep fs_, ext fs_]]
+        concatPathString [name fs_, frameSep fs_, fromString frameNumber, ".", ext fs_]]
     where frameNumber =
             case padding fs_ of
               PaddingMax _ -> show frame_
@@ -241,8 +237,7 @@ instance Arbitrary FileSequence where
                 , path = "/tmp/" -- pathName_ TODO : the ending / is required, we should write a rule in case the path does not end with / or change the path comparison method so it handle correctly different string pointing to the same path
                 , name = "test" -- seqName 
                 , ext = "dpx" -- same as above
-                , frameSep = frameSep_
-                , extSep = "."}
+                , frameSep = frameSep_ }
      return fs
      -- write detectable padding instead of possible padding
      -- generate a list of possible padding for this particular list of frames
