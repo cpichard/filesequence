@@ -175,7 +175,7 @@ fileSequenceFromName name_ =
                     , frameSep = sep1
                     , extSep = sep2 
                     } 
-                where frameNo = read (toString num) :: Int 
+                where frameNo = read (toString num) :: FrameNumber 
                       numberLength = length (toString numbers)
                       deducePadding | frameNo == 0 && numberLength == 1 = PaddingMax 1
                                     | abs frameNo < 10^(numberLength-1) = PaddingFixed numberLength
@@ -186,7 +186,7 @@ fileSequenceFromName name_ =
           regResult = filename =~ fileInSeq :: [[ByteString]]
 
 -- |Decode the filesequence from a printf format and the first and last frames 
-fileSequenceFromPrintfFormat :: PathString -> Int -> Int -> Maybe FileSequence
+fileSequenceFromPrintfFormat :: PathString -> FrameNumber -> FrameNumber -> Maybe FileSequence
 fileSequenceFromPrintfFormat name_ ff lf = 
     case regResult of
       [[ _, fullName, sep1, code, sep2, ext_ ]]
@@ -205,7 +205,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
           regResult = filename =~ seqInPrintf :: [[ByteString]]
 
 -- |Returns the filename of the frame number
-frameName :: FileSequence -> Int -> PathString
+frameName :: FileSequence -> FrameNumber -> PathString
 frameName fs_ frame_ = joinPath [path fs_, 
         concatPathString [name fs_, frameSep fs_, fromString frameNumber, extSep fs_, ext fs_]]
     where frameNumber =
@@ -218,18 +218,18 @@ frameName fs_ frame_ = joinPath [path fs_,
                      else ""
           nZeros l = l - length absNumber 
 
--- |Returns the list of frames numbers
-frameRange :: FileSequence -> [Int]
+-- |Returns the list of frames numbers rename to frames ? ou frameList ?
+frameRange :: FileSequence -> [FrameNumber]
 frameRange fs_ = toList $ frames fs_
 
--- |Returns the list of all frame names
+-- |Returns the list of all frame names FIXME rename to fileList
 frameList :: FileSequence -> [PathString]
 frameList fs_ = map (frameName fs_) (frameRange fs_)
 
 -- |Arbitrary FileSequence generator
 instance Arbitrary FileSequence where
    arbitrary = do
-     frames_ <- listOf1 arbitrary :: Gen [Int]
+     frames_ <- listOf1 arbitrary :: Gen [FrameNumber]
      plen_ <- elements $ detectablePadding frames_
      frameSep_ <- elements ["", ".", "_"]
      -- FIXME: test won't pass for arbitrary bytestrings, check why

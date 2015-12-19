@@ -1,19 +1,19 @@
 -- | Module FileSequence.SparseFrameList,
 -- Implements a simple data structure to store
 -- sparse sub-sequences of a sequence of frame
--- ex: [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
+-- [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
 -- The first naive implementation with a list of tuple
 -- seems to work just fine in terms of performances in a classical use case.
  
 module System.FileSequence.SparseFrameList where
-type Frame = Int
-type FrameRange = (Frame, Frame)
+type FrameNumber = Int
+type FrameRange = (FrameNumber, FrameNumber)
 type SparseFrameList = [FrameRange]
 
 -- type FrameRanges
 --
 -- | Add frame
-addFrame :: SparseFrameList -> Frame -> SparseFrameList
+addFrame :: SparseFrameList -> FrameNumber -> SparseFrameList
 addFrame [] f = [(f,f)]
 addFrame ar@((minx, maxx):xs) f
     | f == minx-1 = (f, maxx):xs
@@ -28,7 +28,7 @@ addFrame ar@((minx, maxx):xs) f
 
 -- | Test if the frame is inside the set of frames
 -- use `isElementOf`
-isElementOf :: Frame -> SparseFrameList -> Bool
+isElementOf :: FrameNumber -> SparseFrameList -> Bool
 isElementOf _ [] = False
 isElementOf f ((a,b):xs)
   | f >= a && f <= b = True
@@ -43,22 +43,22 @@ isElementOf f ((a,b):xs)
 -- removeFrameRange :: future programming
 
 -- | List all the frames
-toList :: SparseFrameList -> [Frame]
+toList :: SparseFrameList -> [FrameNumber]
 toList (x:xs) = [fst x .. snd x] ++ toList xs
 toList [] = []
 
 -- | First frame 
-firstFrame :: SparseFrameList -> Int
+firstFrame :: SparseFrameList -> FrameNumber
 firstFrame (x:_) = fst x
 firstFrame [] = 0 -- should be error ? shouldn't it ? 
 
 -- | Last frame
-lastFrame :: SparseFrameList -> Int
+lastFrame :: SparseFrameList -> FrameNumber
 lastFrame [] = 0 -- should be error ? shouldn't it ?
 lastFrame x = snd (last x)
 
 -- | Construct a SparseFrameList from a range 
-fromRange :: Int -> Int -> SparseFrameList
+fromRange :: FrameNumber -> FrameNumber -> SparseFrameList
 fromRange ff lf = [(ff,lf)]
 
 
@@ -73,11 +73,11 @@ holes ((_,b):xs)
     | otherwise = (b+1, fst (head xs)-1) : holes xs
 
 -- |Returns the number of frames
-nbFrames :: SparseFrameList -> Int
+nbFrames :: SparseFrameList -> FrameNumber
 nbFrames [] = 0
 nbFrames ((ff, lf):xs) = (lf-ff+1) + (nbFrames xs)
 
 -- |Returns the number of missing frames
-nbMissing :: SparseFrameList -> Int
+nbMissing :: SparseFrameList -> FrameNumber
 nbMissing fss = nbFrames $ holes fss
 

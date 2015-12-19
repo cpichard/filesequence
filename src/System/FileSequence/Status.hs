@@ -8,6 +8,7 @@ import System.FileSequence
 --import System.Posix.Directory.Traversals
 import System.Posix.Files.ByteString
 import System.Posix.Types
+import System.FileSequence.SparseFrameList
 
 -- | A file permission
 data FileSequenceMode = FileSequenceMode
@@ -71,7 +72,7 @@ newFileSequenceStatus = FileSequenceStatus Nothing minBound maxBound 0
 foldStatus :: (PathString -> IO FileStatus)  -- stat function
            -> FileSequence                   --
            -> FileSequenceStatus             --
-           -> [Int]                          -- Frames 
+           -> [FrameNumber]                          -- Frames 
            -> IO FileSequenceStatus
 foldStatus sf fs fss (x:xs) = do
       status <- sf $ filepath x
