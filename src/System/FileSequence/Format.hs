@@ -208,7 +208,7 @@ formatPermFunction _ =
 formatMissing :: FormatingOptions -> FileSequence -> ConsoleString
 formatMissing _ fs = 
     "[" ++ showFrames ++ "]"
-    where showFrames = intercalate ", " $ map tupleToString $ holes (frames fs) 
+    where showFrames = intercalate ", " $ map tupleToString $ intervals $ holes (frames fs) 
           -- Tuple to string : [(1,1), (2,3)] -> ["1", "2-3"]
           tupleToString l | uncurry (==) l = show $ fst l
                           | otherwise      = show (fst l) ++ "-" ++ show (snd l)

@@ -167,7 +167,7 @@ fileSequenceFromName name_ =
             -> if frameNo == 0 && minus == "-"
                 then Nothing
                 else Just FileSequence  
-                    { frames = insertFrame [] frameNo
+                    { frames = insertFrame emptyFrameList frameNo
                     , padding = deducePadding 
                     , path = path_
                     , name = fullName
@@ -190,7 +190,7 @@ fileSequenceFromPrintfFormat name_ ff lf =
     case regResult of
       [[ _, fullName, sep1, code, sep2, ext_ ]]
           -> Just FileSequence
-                    { frames = [((min ff lf), (max ff lf))]
+                    { frames = fromRange (min ff lf) (max ff lf)
                     , padding = PaddingFixed (read (toString code) :: Int) -- FIXME %d should be Nothing
                     , path = path_
                     , name = fullName
@@ -228,7 +228,7 @@ frameList fs_ = map (frameName fs_) (frameRange fs_)
 -- |Arbitrary FileSequence generator
 instance Arbitrary FileSequence where
    arbitrary = do
-     frames_ <- listOf1 arbitrary :: Gen [Int]
+     frames_ <- listOf1 arbitrary :: Gen [FrameNumber]
      -- Positive len_ <- arbitrary
      plen_ <- elements $ possiblePadding frames_
      frameSep_ <- elements ["", ".", "_"]
@@ -236,7 +236,7 @@ instance Arbitrary FileSequence where
      -- pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      -- seqName <- arbitrary `suchThat` nameIsCoherent
      let fs = FileSequence
-                { frames = foldl insertFrame [] frames_ 
+                { frames = foldl insertFrame emptyFrameList frames_ 
                 , padding = plen_
                 , path = "/tmp" -- pathName_ 
                 , name = "test" -- seqName 
@@ -258,7 +258,7 @@ instance Arbitrary FileSequence where
 
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequence -> [FileSequence]
-splitNonContiguous fs = map buildSeq $ frames fs 
+splitNonContiguous fs = map buildSeq $ intervals $ frames fs 
     where buildSeq (ff, lf) = fs {frames = fromRange ff lf}
 
 

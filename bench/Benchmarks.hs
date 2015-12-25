@@ -8,9 +8,7 @@ import Control.DeepSeq
 
 frameListTest :: [Int] -> FrameList
 --frameListTest frms = foldl insertFrame [] frms
-frameListTest frms = insertFrames [] frms
-    where insertFrames sff (x:xs) = insertFrames (insertFrame sff x) xs
-          insertFrames sff [] = sff
+frameListTest frms = insertFrames frms
 
 -- Generate a list of n random frames
 randomFrames :: Int -> IO [Int]
@@ -29,7 +27,7 @@ main = do
   -- Generation of a big list of files
   -- to test string processing speed
   let listOfFiles = frameList FileSequence 
-            { frames = [(-400,3000)]
+            { frames = fromRange (-400) 3000
             , padding = PaddingFixed 8
             , path = "/tmp/djsdk/kldls/klslds/sdiaus/mcdjdj"
             , name = "_tes_tfk__dsfjfjozeifjsjdoisodijfodsvizpcdpoczheer"
@@ -46,7 +44,7 @@ main = do
         , bench "10 random frames" $ whnf frameListTest frames10                                          
         , bench "1000 random frames" $ whnf frameListTest frames1000                                      
         , bench "10000 random frames" $ whnf frameListTest frames10000                                    
-        -- Too long, bench "100000 random frames" $ whnf  frameListTest frames100000                       
+        , bench "100000 random frames" $ whnf  frameListTest frames100000                       
         ],
        bgroup "string processing" 
          [ bench "fileSequenceFromList" $ whnf fileSequencesFromList listOfFiles ]
