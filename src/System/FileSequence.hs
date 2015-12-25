@@ -155,7 +155,7 @@ fileSequencesFromList nameList = findseq nameList []
           mergePaddingFs fs1 fs2 = mergePadding (padding fs1) (padding fs2)
           compatibleSequence fs1 fs2 = (sameSignature fs1 fs2) && (isJust $ mergePaddingFs fs1 fs2) 
           mergeSequence fs1 fs2 = 
-                fs1 { frames = addFrame (frames fs1) (firstFrame (frames fs2))
+                fs1 { frames = insertFrame (frames fs1) (firstFrame (frames fs2))
                     , padding = fromJust $ mergePaddingFs fs1 fs2 
         }
 
@@ -167,7 +167,7 @@ fileSequenceFromName name_ =
             -> if frameNo == 0 && minus == "-"
                 then Nothing
                 else Just FileSequence  
-                    { frames = addFrame [] frameNo
+                    { frames = insertFrame [] frameNo
                     , padding = deducePadding 
                     , path = path_
                     , name = fullName
@@ -236,7 +236,7 @@ instance Arbitrary FileSequence where
      -- pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      -- seqName <- arbitrary `suchThat` nameIsCoherent
      let fs = FileSequence
-                { frames = foldl addFrame [] frames_ 
+                { frames = foldl insertFrame [] frames_ 
                 , padding = plen_
                 , path = "/tmp" -- pathName_ 
                 , name = "test" -- seqName 

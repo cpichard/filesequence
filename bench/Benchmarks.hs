@@ -7,10 +7,10 @@ import System.FileSequence.FrameList
 import Control.DeepSeq
 
 frameListTest :: [Int] -> FrameList
---frameListTest frms = foldl addFrame [] frms
-frameListTest frms = addFrames [] frms
-    where addFrames sff (x:xs) = addFrames (addFrame sff x) xs
-          addFrames sff [] = sff
+--frameListTest frms = foldl insertFrame [] frms
+frameListTest frms = insertFrames [] frms
+    where insertFrames sff (x:xs) = insertFrames (insertFrame sff x) xs
+          insertFrames sff [] = sff
 
 -- Generate a list of n random frames
 randomFrames :: Int -> IO [Int]

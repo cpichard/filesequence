@@ -100,7 +100,7 @@ test_extendedPadding = assertEqual a b
 -- |Frames are restitued correctly in a sparse frame sequence
 prop_sparseFrameList :: [Int] -> Bool
 prop_sparseFrameList frm = 
-    let sfl = foldl addFrame [] frm in
+    let sfl = foldl insertFrame [] frm in
       sort (toList sfl) == sort (nub frm) 
 
 -- |parseFrameSequence test - first element of a frame range is

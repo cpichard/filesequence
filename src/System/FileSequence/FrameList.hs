@@ -12,12 +12,12 @@ type FrameRange = (FrameNumber, FrameNumber)
 type FrameList = [FrameRange]
 
 -- | Add frame
-addFrame :: FrameList -> FrameNumber -> FrameList
-addFrame [] f = [(f,f)]
-addFrame ar@((minx, maxx):xs) f
+insertFrame :: FrameList -> FrameNumber -> FrameList
+insertFrame [] f = [(f,f)]
+insertFrame ar@((minx, maxx):xs) f
     | f == minx-1 = (f, maxx):xs
     | f == maxx+1 = concatFrames (minx, f) xs
-    | f >  maxx+1 = concatFrames (minx, maxx) (addFrame xs f)
+    | f >  maxx+1 = concatFrames (minx, maxx) (insertFrame xs f)
     | f <  minx-1 = concatFrames (f,f) ar 
     | otherwise   = ar 
     where concatFrames (a,b) [] = [(a,b)]
