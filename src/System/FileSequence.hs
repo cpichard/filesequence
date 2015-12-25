@@ -46,7 +46,7 @@ import System.Posix.Directory.Traversals
 import System.Posix.Files.ByteString
 import Control.Monad
 import Text.Regex.PCRE
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (fromJust)
 import System.FileSequence.Internal        
@@ -102,7 +102,7 @@ mergePadding (PaddingMax a) (PaddingMax b) = Just $ PaddingMax (min a b)
 -- |File sequence data structure.
 -- Stores frame range, name, views, extension, padding length
 data FileSequence = FileSequence {
-      frames            :: SparseFrameList
+      frames            :: FrameList
     , padding           :: Padding    -- ^ Padding = number of digit for a frame ex: 00012 -> 5
     , path              :: PathString -- ^ Directory of the sequence
     , name              :: PathString -- ^ Name or prefix of the sequence,

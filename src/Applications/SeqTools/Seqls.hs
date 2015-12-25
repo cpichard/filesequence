@@ -5,7 +5,7 @@ module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Format
 import System.FileSequence.Status
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import System.FileSequence.Internal
 import System.Environment
 import System.Console.GetOpt

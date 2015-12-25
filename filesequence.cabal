@@ -9,7 +9,7 @@ Library
                     System.FileSequence.Status,
                     System.FileSequence.Format,
                     System.FileSequence.Hash,
-                    System.FileSequence.SparseFrameList,
+                    System.FileSequence.FrameList,
                     System.FileSequence.Internal
   build-depends: base, posix-paths, HTF, utf8-string
                , regex-pcre-builtin, filepath, directory

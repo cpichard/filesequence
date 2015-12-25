@@ -3,7 +3,7 @@ module Main ( main ) where
 import System.FileSequence
 import System.FileSequence.Hash
 import System.FileSequence.Format
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import System.Environment
 import System.Console.GetOpt
 import Control.Monad (liftM)

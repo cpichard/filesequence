@@ -1,14 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 import System.Random
 import Criterion.Main
 import System.FileSequence
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import Control.DeepSeq
 
---addFrame :: SparseFrameList -> Frame -> SparseFrameList
-sparseFrameListTest :: [Int] -> SparseFrameList
---sparseFrameListTest frms = foldl addFrame [] frms
-sparseFrameListTest frms = addFrames [] frms
+frameListTest :: [Int] -> FrameList
+--frameListTest frms = foldl addFrame [] frms
+frameListTest frms = addFrames [] frms
     where addFrames sff (x:xs) = addFrames (addFrame sff x) xs
           addFrames sff [] = sff
 
@@ -30,7 +30,7 @@ main = do
   -- to test string processing speed
   let listOfFiles = frameList FileSequence 
             { frames = [(-400,3000)]
-            , paddingLength = Just 8
+            , padding = PaddingFixed 8
             , path = "/tmp/djsdk/kldls/klslds/sdiaus/mcdjdj"
             , name = "_tes_tfk__dsfjfjozeifjsjdoisodijfodsvizpcdpoczheer"
             , ext = "dpx"
@@ -38,15 +38,15 @@ main = do
             , extSep = "."}
   defaultMain 
     [
-      bgroup "sparseFrameList" 
-        [ bench "10 frames" $ whnf sparseFrameListTest [1..10]                                                  
-        , bench "1000 frames" $ whnf sparseFrameListTest [1..1000]                                              
-        , bench "10000 frames" $ whnf sparseFrameListTest [1..10000]                                            
-        , bench "100000 frames" $ whnf sparseFrameListTest [1..100000]                                          
-        , bench "10 random frames" $ whnf sparseFrameListTest frames10                                          
-        , bench "1000 random frames" $ whnf sparseFrameListTest frames1000                                      
-        , bench "10000 random frames" $ whnf sparseFrameListTest frames10000                                    
-        -- Too long, bench "100000 random frames" $ whnf  sparseFrameListTest frames100000                       
+      bgroup "frameList" 
+        [ bench "10 frames" $ whnf frameListTest [1..10]                                                  
+        , bench "1000 frames" $ whnf frameListTest [1..1000]                                              
+        , bench "10000 frames" $ whnf frameListTest [1..10000]                                            
+        , bench "100000 frames" $ whnf frameListTest [1..100000]                                          
+        , bench "10 random frames" $ whnf frameListTest frames10                                          
+        , bench "1000 random frames" $ whnf frameListTest frames1000                                      
+        , bench "10000 random frames" $ whnf frameListTest frames10000                                    
+        -- Too long, bench "100000 random frames" $ whnf  frameListTest frames100000                       
         ],
        bgroup "string processing" 
          [ bench "fileSequenceFromList" $ whnf fileSequencesFromList listOfFiles ]

@@ -1,19 +1,18 @@
--- | Module FileSequence.SparseFrameList,
+-- | Module FileSequence.FrameList,
 -- Implements a simple data structure to store
--- sparse sub-sequences of a sequence of frame
--- ex: [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
+-- list of frames in a compact way. 
+-- First approach is to store the list of contiguous frames as a tuple
+-- [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
 -- The first naive implementation with a list of tuple
 -- seems to work just fine in terms of performances in a classical use case.
  
-module System.FileSequence.SparseFrameList where
-type Frame = Int
-type FrameRange = (Frame, Frame)
-type SparseFrameList = [FrameRange]
+module System.FileSequence.FrameList where
+type FrameNumber = Int
+type FrameRange = (FrameNumber, FrameNumber)
+type FrameList = [FrameRange]
 
--- type FrameRanges
---
 -- | Add frame
-addFrame :: SparseFrameList -> Frame -> SparseFrameList
+addFrame :: FrameList -> FrameNumber -> FrameList
 addFrame [] f = [(f,f)]
 addFrame ar@((minx, maxx):xs) f
     | f == minx-1 = (f, maxx):xs
@@ -28,7 +27,7 @@ addFrame ar@((minx, maxx):xs) f
 
 -- | Test if the frame is inside the set of frames
 -- use `isElementOf`
-isElementOf :: Frame -> SparseFrameList -> Bool
+isElementOf :: FrameNumber -> FrameList -> Bool
 isElementOf _ [] = False
 isElementOf f ((a,b):xs)
   | f >= a && f <= b = True
@@ -43,22 +42,22 @@ isElementOf f ((a,b):xs)
 -- removeFrameRange :: future programming
 
 -- | List all the frames
-toList :: SparseFrameList -> [Frame]
+toList :: FrameList -> [FrameNumber]
 toList (x:xs) = [fst x .. snd x] ++ toList xs
 toList [] = []
 
 -- | First frame 
-firstFrame :: SparseFrameList -> Int
+firstFrame :: FrameList -> FrameNumber
 firstFrame (x:_) = fst x
 firstFrame [] = 0 -- should be error ? shouldn't it ? 
 
 -- | Last frame
-lastFrame :: SparseFrameList -> Int
+lastFrame :: FrameList -> FrameNumber
 lastFrame [] = 0 -- should be error ? shouldn't it ?
 lastFrame x = snd (last x)
 
--- | Construct a SparseFrameList from a range 
-fromRange :: Int -> Int -> SparseFrameList
+-- | Construct a FrameList from a range 
+fromRange :: FrameNumber -> FrameNumber -> FrameList
 fromRange ff lf = [(ff,lf)]
 
 
@@ -66,18 +65,18 @@ fromRange ff lf = [(ff,lf)]
 -- ex :> holes [(1,5), (7,10), (15,20)]
 --     > [(6,6), (11,14)]
 -- FIXME : check complexity
-holes :: SparseFrameList -> SparseFrameList
+holes :: FrameList -> FrameList
 holes [] = []
 holes ((_,b):xs)
     | null xs = []
     | otherwise = (b+1, fst (head xs)-1) : holes xs
 
 -- |Returns the number of frames
-nbFrames :: SparseFrameList -> Int
+nbFrames :: FrameList -> FrameNumber
 nbFrames [] = 0
 nbFrames ((ff, lf):xs) = (lf-ff+1) + (nbFrames xs)
 
 -- |Returns the number of missing frames
-nbMissing :: SparseFrameList -> Int
+nbMissing :: FrameList -> FrameNumber
 nbMissing fss = nbFrames $ holes fss
 

@@ -3,7 +3,7 @@
 
 module Main where
 import System.FileSequence
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import Data.List (nub, sort, permutations)
 import Test.Framework
 
@@ -103,7 +103,7 @@ prop_sparseFrameList frm =
     let sfl = foldl addFrame [] frm in
       sort (toList sfl) == sort (nub frm) 
 
--- |SparseFrameSequence test - first element of a frame range is
+-- |parseFrameSequence test - first element of a frame range is
 -- less or equal than the second one
 prop_FrameRange :: FileSequence -> Bool
 prop_FrameRange fs = all sup sfl
@@ -131,7 +131,7 @@ prop_orderDoesNotMatter fs = all (fs==) permuts
   where permuts = map head $ map fileSequencesFromList $ permutations (frameList fs)
 
 -- |Number of missing frames max-min - nbframes
-prop_holeSize :: SparseFrameList -> Bool
+prop_holeSize :: FrameList -> Bool
 prop_holeSize [] = nbMissing [] == nbFrames [] -- no frames at all 
 prop_holeSize fs = nbMissing fs == lastFrame fs - firstFrame fs + 1 - nbFrames fs
 

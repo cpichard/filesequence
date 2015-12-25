@@ -19,7 +19,7 @@ module System.FileSequence.Format (
 import System.FileSequence
 import System.FileSequence.Internal
 import System.FileSequence.Status
-import System.FileSequence.SparseFrameList
+import System.FileSequence.FrameList
 import Data.List
 import Text.Printf
 import Data.Bits
