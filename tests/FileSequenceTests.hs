@@ -90,19 +90,6 @@ test_extendedPadding = assertEqual a b
                 , frameSep = "."
                 , extSep = "."}]
 
--- |Frames are restitued correctly in a sparse frame sequence
-prop_sparseFrameList :: [FrameNumber] -> Bool
-prop_sparseFrameList frm = 
-    let sfl = foldl insertFrame emptyFrameList frm in
-      sort (toList sfl) == sort (nub frm) 
-
--- |parseFrameSequence test - first element of a frame range is
--- less or equal than the second one
-prop_FrameRange :: FileSequence -> Bool
-prop_FrameRange fs = all sup sfl
-  where sup (a,b) = a <= b
-        sfl = intervals $ frames fs
-
 -- |Property:
 -- list of files A -> FileSequence -> list of files B
 -- => A == B 
