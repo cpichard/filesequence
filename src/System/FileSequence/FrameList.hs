@@ -1,125 +1,88 @@
 -- | Module FileSequence.FrameList,
--- Implements a simple data structure to store
--- list of frames in a compact way. 
--- First approach is to store the list of contiguous frames as a list of tuple
--- [ (1,5) , (7,10) ] represents frames from 1 to 5 and 7 to 10
- 
+--   Functions to store a list of frames efficiently
+
 module System.FileSequence.FrameList where
-type FrameNumber = Int
-type FrameRange = (FrameNumber, FrameNumber)
 
--- | We use a binary tree to store the frame intervals
-data FrameList = Empty | Node FrameRange FrameList FrameList deriving Show
--- TODO : look for the function to fold this datastructure
+import Test.QuickCheck
 
--- | Instance Eq
+-- Import the chosen implementation: IntervalTree or TupleList 
+-- IntervalTree is still WIP and not passing the tests yet
+
+--import qualified System.FileSequence.FrameList.IntervalTree as Impl
+--newtype FrameList = FL Impl.IntervalTree
+-- or :
+import qualified System.FileSequence.FrameList.TupleList as Impl
+newtype FrameList = FL Impl.TupleList 
+-- Note that newtype is used so the Arbitrary instance is not a Synonym
+
+type FrameNumber = Impl.FrameNumber
+type FrameRange = Impl.FrameRange 
+
 instance Eq FrameList where
-  (==) a b = intervals a == intervals b  
+  (==) (FL a) (FL b) = Impl.intervals a == Impl.intervals b  
 
+instance Show FrameList where
+  show (FL a) = show a
 
--- | Returns a new empty frame list 
+-- | Returns an empty frame list
 emptyFrameList :: FrameList
-emptyFrameList = Empty
+emptyFrameList = FL Impl.emptyFrameList
 
--- | Insert a new frame
+-- | Insert one frame in the list
+-- | the FrameList structure works like a set so if 
+--   the frame already exists it is not inserted again
 insertFrame :: FrameList -> FrameNumber -> FrameList
-insertFrame Empty f = Node (f,f) Empty Empty
-insertFrame node@(Node (minx, maxx) left right) f 
-   | f == minx - 1 = joinRight (Node (f, maxx) left right)
-   | f == maxx + 1 = joinLeft (Node (minx, f) left right)
-   | f < minx - 1 = Node (minx, maxx) (insertFrame left f) right
-   | f > maxx + 1 = Node (minx, maxx) left (insertFrame right f)
-   | otherwise = node
-   -- We should test for this condition | otherwise =  error "trying to insert an already inserted value"
+insertFrame (FL a) fn = FL (Impl.insertFrame a fn)
 
-   where splitMin (Node (minx, maxx) Empty right) = (minx, maxx, right)
-         splitMin (Node (minx, maxx) left right) = 
-             let (u,v,l') = splitMin left in
-             (u, v, Node (minx, maxx) l' right)
-         splitMax (Node (minx, maxx) left Empty) = (minx, maxx, left)
-         splitMax (Node (minx, maxx) left right) = 
-             let (u,v,r') = splitMax right in
-             (u, v, Node (minx, maxx) left r')
-
-         joinRight node@(Node (_, _) _ Empty) = node 
-         joinRight node@(Node (minx, maxx) left right) = 
-            let (minx', maxx', right') = splitMin right in
-            if minx'-1 == maxx 
-              then Node (minx, maxx') left right'
-              else node
-         joinLeft node@(Node (_, _) Empty _) = node 
-         joinLeft node@(Node (minx, maxx) left right) = 
-            let (minx', maxx', left') = splitMax left in
-            if maxx'+1 == minx 
-              then Node (minx', maxx) left' right
-              else node
-
+-- | Insert a list of frames 
 insertFrames :: [FrameNumber] -> FrameList
-insertFrames = foldr (flip insertFrame) emptyFrameList
+insertFrames fl = FL (Impl.insertFrames fl) 
 
--- | Test if the frame is inside the set of frames
--- use `isElementOf`
+-- | Test if a given frame is in the list
 isElementOf :: FrameNumber -> FrameList -> Bool
-isElementOf _ Empty = False
-isElementOf f (Node (minx, maxx) left right)
-  | f >= minx && f <= maxx = True
-  | f < minx = isElementOf f left
-  | f > maxx = isElementOf f right
+isElementOf fn (FL a) = Impl.isElementOf fn a
 
--- unionFrameRange :: future programming
-
--- intersectFrameRange :: future programming
-
--- removeFrame :: future programming
-
--- removeFrameRange :: future programming
-
--- | List all the frames
+-- | Returns a list of frame numbers
 toList :: FrameList -> [FrameNumber]
-toList Empty = []
-toList (Node (maxx, minx) Empty Empty) = [maxx .. minx]
-toList (Node (maxx, minx) left right) = toList left ++ [maxx .. minx] ++ toList right 
+toList (FL a)= Impl.toList a
 
+-- | Returns a list of intervals
 intervals :: FrameList -> [(FrameNumber, FrameNumber)]
-intervals Empty = []
-intervals (Node (maxx, minx) Empty Empty) = [(maxx, minx)]
-intervals (Node (maxx, minx) left right) = intervals left ++ [(maxx, minx)] ++ intervals right 
+intervals (FL a) = Impl.intervals a
 
--- | First frame 
+-- | Returns the first frame
 firstFrame :: FrameList -> FrameNumber
-firstFrame (Node (minx, _) Empty _) = minx
-firstFrame (Node (_, _) left _) = firstFrame left
-firstFrame Empty = 0 -- should be error ? shouldn't it ? 
+firstFrame (FL a) = Impl.firstFrame a
 
--- | Last frame
+-- | Returns the last frame
 lastFrame :: FrameList -> FrameNumber
-lastFrame Empty = 0 -- should be error ? shouldn't it ?
-lastFrame (Node (_, maxx) _ Empty) = maxx 
-lastFrame (Node (_, _) _ right) = lastFrame right 
+lastFrame (FL a) = Impl.lastFrame a
 
--- | Construct a FrameList from a range 
+-- | Create a FrameList from an inclusive range 
 fromRange :: FrameNumber -> FrameNumber -> FrameList
-fromRange ff lf = Node (ff,lf) Empty Empty
+fromRange a b = FL (Impl.fromRange a b)
 
-
--- | Returns the list of missing frames
--- ex :> holes [(1,5), (7,10), (15,20)]
---     > [(6,6), (11,14)]
--- FIXME : check complexity
+-- | Returns the missing frames as a FrameList
 holes :: FrameList -> FrameList
-holes _ = Empty
---holes [] = []
---holes ((_,b):xs)
---    | null xs = []
---    | otherwise = (b+1, fst (head xs)-1) : holes xs
+holes (FL h) = FL (Impl.holes h)
 
--- |Returns the number of frames
+-- | Returns the number of frames stored in the list
 nbFrames :: FrameList -> FrameNumber
-nbFrames Empty = 0
-nbFrames fl = length $ toList fl -- TODO count nbFrames instead of creating a list of the number of frames
---nbFrames ((ff, lf):xs) = (lf-ff+1) + (nbFrames xs)
+nbFrames (FL h) = Impl.nbFrames h
 
--- |Returns the number of missing frames
+-- | Returns the number of missing frames in the list
 nbMissing :: FrameList -> FrameNumber
-nbMissing fss = nbFrames $ holes fss
+nbMissing (FL h) = Impl.nbMissing h
 
+-- | Generate random arbitrary FrameList
+instance Arbitrary FrameList where
+    arbitrary = do
+     frames_ <- listOf1 arbitrary :: Gen [FrameNumber]
+     return $ foldl insertFrame emptyFrameList frames_
+
+-- Future programming:
+-- unionFrameList :: 
+-- intersectFrameList :: 
+-- removeFrame :: 
+-- removeFrameRange :: 
+--

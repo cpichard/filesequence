@@ -10,6 +10,8 @@ Library
                     System.FileSequence.Format,
                     System.FileSequence.Hash,
                     System.FileSequence.FrameList,
+                    System.FileSequence.FrameList.IntervalTree,
+                    System.FileSequence.FrameList.TupleList,
                     System.FileSequence.Internal
   build-depends: base, posix-paths, HTF, utf8-string
                , regex-pcre-builtin, filepath, directory
