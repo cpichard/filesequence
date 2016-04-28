@@ -12,6 +12,7 @@ Library
                     System.FileSequence.FrameList,
                     System.FileSequence.FrameList.IntervalTree,
                     System.FileSequence.FrameList.TupleList,
+                    System.FileSequence.Padding
                     System.FileSequence.Internal
   build-depends: base, posix-paths, HTF, utf8-string
                , regex-pcre-builtin, filepath, directory

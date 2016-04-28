@@ -15,6 +15,7 @@ Code health
 * rename tests with more meaningful names
 * rename FileSequenceStatus by FileSequenceAttributes
 * remove all unused functions, remove getRecursivedir function
+* rename frameList to frameNames
 * export library functions only in one file
 * create one module file for padding
 * seqls to handle correctly exceptions
