@@ -4,7 +4,7 @@
 module FileSequenceTests  where
 import System.FileSequence
 import System.FileSequence.FrameList
-import Data.List (nub, sort, permutations)
+import Data.List (sort, permutations)
 import Test.Framework
 import Samples
 
@@ -21,7 +21,7 @@ test_negativeFrames = assertEqual a b
                 , frameSep = "."
                 , extSep = "."}] 
 
--- |Sequence with no name, only numbers, is valid
+-- | Sequence with no name, only numbers, is valid
 test_sequenceWithoutName :: IO ()
 test_sequenceWithoutName = assertEqual a b 
     where b = fileSequenceFromName "0005.dpx"
@@ -34,9 +34,9 @@ test_sequenceWithoutName = assertEqual a b
                     , frameSep = ""
                     , extSep = "."}
 
--- |Test utf8 characters
-test_utf8FromName :: IO ()
-test_utf8FromName = assertEqual a b
+-- | Test utf8 characters
+test_keepUtf8FromName :: IO ()
+test_keepUtf8FromName = assertEqual a b
     where b = fileSequenceFromName "fffèè.0003.fg"
           a = Just FileSequence 
                     { frames = fromRange 3 3 
@@ -48,9 +48,9 @@ test_utf8FromName = assertEqual a b
                     , extSep = "."}
 
 
--- |Minus zero frame (ex: myfile.-0.tmp) is invalid
-test_minusZero :: IO ()
-test_minusZero = assertEqual a b
+-- | Minus zero frame (ex: myfile.-0.tmp) is invalid
+test_minusZeroIsInvalid :: IO ()
+test_minusZeroIsInvalid = assertEqual a b
     where b = fileSequenceFromName "test-0.0a1"
           a = Nothing 
 

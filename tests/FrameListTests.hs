@@ -5,6 +5,7 @@ module FrameListTests where
 
 import System.FileSequence.FrameList
 import Test.Framework
+import Data.List (nub, sort)
 
 -- | Frames are stored and correctly restitued in a FrameList
 prop_framesCorrectlyRestitued :: [FrameNumber] -> Bool
