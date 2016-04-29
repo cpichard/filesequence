@@ -17,15 +17,16 @@ import Control.Exception
 import System.IO.Error
 import System.IO (hPutStr, stderr)
 import Data.ByteString.UTF8 (toString)
+
 --------------------------------------------------------------------------------
--- |Operations on the different kinds of string used
+-- | Operations on the different kinds of string used
 --------------------------------------------------------------------------------
 
--- |Path string type
+-- | Path string type
 -- We use raw bytes to store and process the path information, same as posix
 type PathString = RawFilePath
 
--- |Generate arbitrary PathString for quickcheck testing
+-- | Generate arbitrary PathString for quickcheck testing
 instance Arbitrary PathString where
    arbitrary = BC.pack <$> listOf arbitrary
 
@@ -36,30 +37,30 @@ instance Arbitrary PathString where
 -- instance IsString BC.ByteString
 -- Defined in ‘Data.ByteString.Internal’
 
--- |String type used for display: Unicode haskell String
+-- | String type used for display: Unicode haskell String
 type ConsoleString = String
 
--- |Concat path string
+-- | Concat path string
 concatPathString :: [PathString] -> PathString
 concatPathString = BS.concat 
 
--- |Concat console string
+-- | Concat console string
 concatConsoleString :: [ConsoleString] -> ConsoleString
 concatConsoleString = concat
 
--- |Convert string used in a console to string used for paths
+-- | Convert string used in a console to string used for paths
 consoleToPath :: ConsoleString -> PathString
 consoleToPath = BC.pack
 
--- |Convert string used for paths to string used in console
+-- | Convert string used for paths to string used in console
 pathToConsole :: PathString -> ConsoleString
 pathToConsole = toString
 
--- |Convert a string used for path to an standard haskell string 
+-- | Convert a string used for path to an standard haskell string 
 pathToString :: PathString -> String
 pathToString = BC.unpack
 
--- |Test if a path is a directory
+-- | Test if a path is a directory
 isRawDir :: PathString -> IO Bool
 isRawDir f = isDirectory <$> getFileStatus f
 
@@ -67,12 +68,12 @@ isRawDir f = isDirectory <$> getFileStatus f
 -- | File system accessories functions
 --------------------------------------------------------------------------------
 
--- |Split filesequence name == dir and base name
+-- | Split filesequence name == dir and base name
 dirAndFileName :: PathString -> (PathString, PathString)
 dirAndFileName x = (BC.reverse b, BC.reverse a)
     where (a,b) = BC.break (=='/') $ BC.reverse x
 
--- |Recursive directories (from Real world haskell)
+-- | Recursive directories (from Real world haskell)
 getRecursiveDirs :: PathString -> IO [PathString]
 getRecursiveDirs topdir = do
   namesAndTypes <- getDirectoryContents topdir
@@ -85,7 +86,7 @@ getRecursiveDirs topdir = do
       else return []
   return $ topdir: concat paths
 
--- |Traverse folders and apply a function to the list of files contained 
+-- | Traverse folders and apply a function to the list of files contained 
 -- in each of them 
 visitFolders :: Bool                    -- Recursive
              -> [PathString]            -- Remaining folders
@@ -123,7 +124,7 @@ splitDirsAndFiles (x:xs) = do
   where conc True x' xs' = x':xs'
         conc False _ xs' = xs'
 
--- |Split files and directories in two lists. This function uses the
+-- | Split files and directories in two lists. This function uses the
 -- direntry information instead of the status to determine if an entry 
 -- is a file or a dir.
 splitDirsAndFilesFast :: PathString           -- root
@@ -143,7 +144,7 @@ splitDirsAndFilesFast root (x:xs) d f
   | otherwise = splitDirsAndFilesFast root xs d f
 
 
--- |Copy files for internal types
+-- | Copy files for internal types
 copyFile :: PathString -> PathString -> IO ()
 copyFile fromPath toPath =
      copy `catchIOError` (\exc -> throw $ ioeSetLocation exc "copyFile")
