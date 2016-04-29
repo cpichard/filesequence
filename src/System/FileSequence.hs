@@ -206,13 +206,13 @@ instance Arbitrary FileSequence where
      plen_ <- elements $ possiblePadding frames_
      frameSep_ <- elements ["", ".", "_"]
      -- FIXME: test won't pass for arbitrary bytestrings, check why
-     -- pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
-     -- seqName <- arbitrary `suchThat` nameIsCoherent
+     pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
+     seqName <- arbitrary `suchThat` nameIsCoherent
      let fs = FileSequence
                 { frames = foldl insertFrame emptyFrameList frames_ 
                 , padding = plen_
-                , path = "/tmp" -- pathName_ 
-                , name = "test" -- seqName 
+                , path = pathName_ 
+                , name = seqName 
                 , ext = "dpx" -- same as above
                 , frameSep = frameSep_
                 , extSep = "."}
@@ -226,8 +226,8 @@ instance Arbitrary FileSequence where
            countDigits = map (length.show.abs) 
            differs (x:xs) = not $ all (==x) xs
            differs [] = True
-           --nameIsCoherent x = BC.readInt x == Nothing 
-           --                 && all ((flip BC.notElem) x) ['\n', '\0', '\t']
+           nameIsCoherent x = BC.readInt x == Nothing 
+                            && all ((flip BC.notElem) x) ['\n', '\0', '\t']
 
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequence -> [FileSequence]
