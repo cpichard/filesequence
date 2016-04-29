@@ -1,5 +1,6 @@
 module System.FileSequence.Padding where
 
+import System.FileSequence.FrameList (FrameNumber)
 
 -- | Store Padding information 
 -- We consider 2 cases:
@@ -26,4 +27,13 @@ mergePadding (PaddingMax a) (PaddingFixed b)
         | otherwise = Nothing
 mergePadding (PaddingFixed a) (PaddingMax b) = mergePadding (PaddingMax b) (PaddingFixed a)
 mergePadding (PaddingMax a) (PaddingMax b) = Just $ PaddingMax (min a b)
+
+-- | Deduce the padding from the frame number and the number of digit used to encode it
+--   The digits does not take the minus. 
+deducePadding :: FrameNumber -> Int -> Padding
+deducePadding frameNb numberDigits
+    | abs frameNb < 10^(numberDigits-1) = PaddingFixed numberDigits
+    | otherwise = PaddingMax numberDigits
+
+
 

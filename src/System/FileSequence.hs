@@ -143,17 +143,15 @@ fileSequenceFromName name_ =
                 then Nothing
                 else Just FileSequence  
                     { frames = insertFrame emptyFrameList frameNo
-                    , padding = deducePadding 
+                    , padding = deducePadding frameNo numberLength 
                     , path = path_
                     , name = fullName
                     , ext = ext_
                     , frameSep = sep1
                     , extSep = sep2 
                     } 
-                where frameNo = read (toString num) :: Int 
+                where frameNo = read (toString num) :: FrameNumber -- TODO should be FrameNumber, not Int
                       numberLength = length (toString numbers)
-                      deducePadding | abs frameNo < 10^(numberLength-1) = PaddingFixed numberLength
-                                    | otherwise = PaddingMax numberLength
         _   -> Nothing
 
     where (path_, filename) = dirAndFileName name_

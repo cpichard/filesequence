@@ -64,8 +64,8 @@ test_sameFrameTwice = do
           c = isElementOf 10 $ frames (head b)
           d = isElementOf 10 $ frames (last b)
 
--- |Same test as above, but we test that all permutations of the input frames 
--- gives the same 2 result sequences 
+-- |Same test as above, but we test that with all permutations of the input frames 
+-- we end up with the same 2 result sequences 
 test_extendPaddingOrder :: IO ()
 test_extendPaddingOrder = do assertBool $ all (a ==) b
   where a = fileSequencesFromList sameFrameTwice 

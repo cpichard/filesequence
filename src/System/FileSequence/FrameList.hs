@@ -8,11 +8,11 @@ import Test.QuickCheck
 -- Import the chosen implementation: IntervalTree or TupleList 
 -- IntervalTree is still WIP and not passing the tests yet
 
-import qualified System.FileSequence.FrameList.IntervalTree as Impl
-newtype FrameList = FL Impl.IntervalTree
+--import qualified System.FileSequence.FrameList.IntervalTree as Impl
+--newtype FrameList = FL Impl.IntervalTree
 -- or :
---import qualified System.FileSequence.FrameList.TupleList as Impl
---newtype FrameList = FL Impl.TupleList 
+import qualified System.FileSequence.FrameList.TupleList as Impl
+newtype FrameList = FL Impl.TupleList 
 -- Note that newtype is used so the Arbitrary instance is not a Synonym
 
 type FrameNumber = Impl.FrameNumber
