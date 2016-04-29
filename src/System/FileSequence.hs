@@ -55,7 +55,7 @@ import Data.Maybe (isJust)
 import Test.QuickCheck
 import System.FileSequence.Padding
 import qualified Data.ByteString.Char8 as BC
-
+import Data.List (sort)
 sepReg :: PathString
 sepReg = "(\\.|_)"
 
@@ -117,7 +117,7 @@ fileSequencesFromFiles files = do
 
 -- |Returns the file sequences of a list of file names
 fileSequencesFromList :: [PathString] -> [FileSequence]
-fileSequencesFromList nameList = findseq nameList []
+fileSequencesFromList nameList = findseq (sort nameList) []
     where findseq (x:xs) found = 
             case fileSequenceFromName x of
                 Nothing -> findseq xs found
