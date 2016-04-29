@@ -129,5 +129,3 @@ test_detectSequenceFromUtf8 = do
                  , frameSep = "."
                  , extSep = "."
                  }
-
-

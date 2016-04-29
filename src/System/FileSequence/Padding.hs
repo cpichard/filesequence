@@ -20,11 +20,11 @@ data Padding = PaddingFixed Int
 --   with a printf("%0xd") 
 mergePadding :: Padding -> Padding -> Maybe Padding
 mergePadding (PaddingFixed a) (PaddingFixed b)
-        | a == b = Just $ PaddingFixed a -- same fixed padding
-        | otherwise = Nothing            -- different padding ex: 010 != 0010
+    | a == b = Just $ PaddingFixed a -- same fixed padding
+    | otherwise = Nothing            -- different padding ex: 010 != 0010
 mergePadding (PaddingMax a) (PaddingFixed b) 
-        | b <= a = Just $ PaddingFixed b
-        | otherwise = Nothing
+    | b <= a = Just $ PaddingFixed b
+    | otherwise = Nothing
 mergePadding (PaddingFixed a) (PaddingMax b) = mergePadding (PaddingMax b) (PaddingFixed a)
 mergePadding (PaddingMax a) (PaddingMax b) = Just $ PaddingMax (min a b)
 
