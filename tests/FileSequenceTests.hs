@@ -19,7 +19,7 @@ test_detectNegativeFrames = assertEqual a b
                 , name = "test"
                 , ext = "dpx"
                 , frameSep = "."
-                , extSep = "."}] 
+                }] 
 
 -- | Sequence with no name, only numbers, is valid
 test_detectSequenceWithoutName :: IO ()
@@ -32,7 +32,7 @@ test_detectSequenceWithoutName = assertEqual a b
                     , name = ""
                     , ext = "dpx"
                     , frameSep = ""
-                    , extSep = "."}
+                    }
 
 -- | Minus zero frame (ex: myfile.-0.tmp) is invalid
 test_minusZeroIsInvalid :: IO ()
@@ -74,7 +74,7 @@ test_extendedPadding = assertEqual a b
                 , name = "b"
                 , ext = "tmp"
                 , frameSep = "."
-                , extSep = "."}]
+                }]
 
 -- | Transparency property:
 -- list of files A -> FileSequence -> list of files B
@@ -112,7 +112,7 @@ test_keepUtf8CharactersInName = assertEqual a b
                     , name = "fffèè"
                     , ext = "fg"
                     , frameSep = "."
-                    , extSep = "."}
+                    }
 
 -- | Test detection of sequence with utf8 characters
 test_detectSequenceFromUtf8 :: IO ()
@@ -127,5 +127,4 @@ test_detectSequenceFromUtf8 = do
                  , name = "ffﾩﾩΠ"
                  , ext = "f"
                  , frameSep = "."
-                 , extSep = "."
                  }

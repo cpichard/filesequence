@@ -125,7 +125,7 @@ formatSequence :: FileSequence
                -> (FileSequence -> PathString)
                -> PathString
 formatSequence fs_ path_ padding_ =
-    concatPathString [path_ fs_, name fs_, frameSep fs_, padding_ fs_, extSep fs_, ext fs_]
+    concatPathString [path_ fs_, name fs_, frameSep fs_, padding_ fs_, extSepChar, ext fs_]
 
 -- |Format the structure in a string readable by nuke
 formatAsNukeSequence :: Bool -> FileSequence -> PathString
