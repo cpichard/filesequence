@@ -202,10 +202,8 @@ frameList fs_ = map (frameName fs_) (frameRange fs_)
 instance Arbitrary FileSequence where
    arbitrary = do
      frames_ <- listOf1 arbitrary :: Gen [FrameNumber]
-     -- Positive len_ <- arbitrary
      plen_ <- elements $ possiblePadding frames_
      frameSep_ <- elements ["", ".", "_"]
-     -- FIXME: test won't pass for arbitrary bytestrings, check why
      pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      seqName <- arbitrary `suchThat` nameIsCoherent
      let fs = FileSequence
@@ -227,6 +225,7 @@ instance Arbitrary FileSequence where
            differs (x:xs) = not $ all (==x) xs
            differs [] = True
            nameIsCoherent x = BC.readInt x == Nothing 
+                            && BC.readInt (BC.reverse x) == Nothing
                             && all ((flip BC.notElem) x) ['\n', '\0', '\t']
 
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
