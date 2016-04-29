@@ -8,9 +8,9 @@ import Data.List (sort, permutations)
 import Test.Framework
 import Samples
 
--- | Negative frames quick test
-test_negativeFrames :: IO ()
-test_negativeFrames = assertEqual a b
+-- | Detect negative frames
+test_detectNegativeFrames :: IO ()
+test_detectNegativeFrames = assertEqual a b
     where b = fileSequencesFromList ["test.-0004.dpx", "test.-0003.dpx"]
           a =[FileSequence 
                 { frames = fromRange (-4) (-3) 
@@ -22,8 +22,8 @@ test_negativeFrames = assertEqual a b
                 , extSep = "."}] 
 
 -- | Sequence with no name, only numbers, is valid
-test_sequenceWithoutName :: IO ()
-test_sequenceWithoutName = assertEqual a b 
+test_detectSequenceWithoutName :: IO ()
+test_detectSequenceWithoutName = assertEqual a b 
     where b = fileSequenceFromName "0005.dpx"
           a = Just FileSequence 
                     { frames = fromRange 5 5 
@@ -76,17 +76,21 @@ test_extendedPadding = assertEqual a b
                 , frameSep = "."
                 , extSep = "."}]
 
--- |Property:
+-- | Transparency property:
 -- list of files A -> FileSequence -> list of files B
--- => A == B 
+--   ==> B == A 
 -- Also enforce that the list of file is not empty
-prop_frameConsistency :: FileSequence -> Bool
-prop_frameConsistency fs = sort (frameList fs) == sort (frameList newfss)
-  where newfss = head $ fileSequencesFromList (frameList fs)
+prop_transparency :: FileSequence -> Bool
+prop_transparency fs = sort a == sort b
+  where a = frameList fs
+        newfs = head $ fileSequencesFromList a
+        b = frameList newfs
 
--- |FIXME Test filesequence equality here instead of the list of files 
+-- | Frames restitued by a FileSequence will produce the same FileSequence
+--  fs1 --toList--> [frames] --fromList--> fs2
+--   ==> fs1 == fs2
 prop_bijectiveFunc :: FileSequence -> Bool
-prop_bijectiveFunc fs =  sort (frameList fs1) == sort (frameList fs2)
+prop_bijectiveFunc fs = fs1 == fs2 --  && fs2 == fs
   where fs1 = head $ fileSequencesFromList (frameList fs)
         fs2 = head $ fileSequencesFromList (frameList fs1)
 
@@ -97,9 +101,22 @@ prop_bijectiveFunc fs =  sort (frameList fs1) == sort (frameList fs2)
 --prop_orderDoesNotMatter fs = all (fs==) permuts
 --  where permuts = map head $ map fileSequencesFromList $ permutations (frameList fs)
 
--- |Test utf8 
-test_utf8FromList :: IO ()
-test_utf8FromList = do
+-- | Test utf8 characters
+test_keepUtf8CharactersInName :: IO ()
+test_keepUtf8CharactersInName = assertEqual a b
+    where b = fileSequenceFromName "fffèè.0003.fg"
+          a = Just FileSequence 
+                    { frames = fromRange 3 3 
+                    , padding = PaddingFixed 4
+                    , path = ""
+                    , name = "fffèè"
+                    , ext = "fg"
+                    , frameSep = "."
+                    , extSep = "."}
+
+-- | Test detection of sequence with utf8 characters
+test_detectSequenceFromUtf8 :: IO ()
+test_detectSequenceFromUtf8 = do
     assertBool $ length b == 1
     assertEqual a (head b)
     where b = fileSequencesFromList ["ffﾩﾩΠ.001.f", "ffﾩﾩΠ.002.f", "ffﾩﾩΠ.003.f"]
