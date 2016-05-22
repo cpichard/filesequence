@@ -22,6 +22,7 @@ Code health
 * change comments, add a space after the bar|
 * split tests in several modules
 * fix all compilation warnings
+* refresh the documentation
 
 Bug fix
 =======
