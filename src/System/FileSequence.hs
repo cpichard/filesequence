@@ -205,12 +205,13 @@ instance Arbitrary FileSequence where
      frameSep_ <- elements ["", ".", "_"]
      pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      seqName <- arbitrary `suchThat` nameIsCoherent
+     ext_ <- elements (['a' .. 'z'] :: [PathString])
      let fs = FileSequence
                 { frames = foldl insertFrame emptyFrameList frames_ 
                 , padding = plen_
                 , path = pathName_ 
                 , name = seqName 
-                , ext = "dpx" -- same as above
+                , ext = ext_
                 , frameSep = frameSep_
                 }
      return fs
@@ -226,7 +227,8 @@ instance Arbitrary FileSequence where
            nameIsCoherent x = BC.readInt x == Nothing 
                             && BC.readInt (BC.reverse x) == Nothing
                             && all ((flip BC.notElem) x) ['\n', '\0', '\t']
-
+           extensionIsCoherent x = all ((flip BC.notElem) x) ['\n', '\0', '\t', '.']
+                                 && (BC.length x) >= 1
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequence -> [FileSequence]
 splitNonContiguous fs = map buildSeq $ intervals $ frames fs 
