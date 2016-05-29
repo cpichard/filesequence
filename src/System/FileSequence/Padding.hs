@@ -32,7 +32,7 @@ mergePadding (PaddingMax a) (PaddingMax b) = Just $ PaddingMax (min a b)
 --   The digits does not take the minus. 
 deducePadding :: FrameNumber -> Int -> Padding
 deducePadding frameNb numberDigits
-    | abs frameNb < 10^(numberDigits-1) = PaddingFixed numberDigits
+    | abs (toInteger frameNb) < 10^(numberDigits-1) = PaddingFixed numberDigits
     | otherwise = PaddingMax numberDigits
 
 
