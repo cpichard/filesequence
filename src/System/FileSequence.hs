@@ -225,8 +225,11 @@ instance Arbitrary FileSequence where
            countDigits = map (length.show.abs) 
            differs (x:xs) = not $ all (==x) xs
            differs [] = True
+           -- FIXME: the parser can potentially read sequences ending with number
+           -- or dash and produce errors, the test should be enforce in the parser.
            nameIsCoherent x = BC.readInt x == Nothing 
                             && BC.readInt (BC.reverse x) == Nothing
+                            && (x == BC.empty || (BC.head (BC.reverse x)) /= '-')
                             && all ((flip BC.notElem) x) ['\n', '\0', '\t']
            byteStringAlphaNum = map BC.singleton (['0'..'9']++['A'..'Z']++['a'..'z'])
 
