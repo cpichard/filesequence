@@ -63,6 +63,7 @@ sepReg = "(\\.|_)"
 frameSepReg :: PathString
 frameSepReg = concatPathString [sepReg, "?"]
 
+extSepChar :: PathString
 extSepChar = "."
 
 extSepReg :: PathString
@@ -203,15 +204,15 @@ instance Arbitrary FileSequence where
      frames_ <- listOf1 arbitrary :: Gen [FrameNumber]
      plen_ <- elements $ possiblePadding frames_
      frameSep_ <- elements ["", ".", "_"]
-     pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
+     pathName_ <- oneof [arbitrary, elements [BC.pack "/"]] -- FIXME: this is incorrect
      seqName <- arbitrary `suchThat` nameIsCoherent
-     ext_ <- arbitrary `suchThat` extensionIsCoherent 
+     ext_ <- listOf1 $ elements byteStringAlphaNum 
      let fs = FileSequence
                 { frames = foldl insertFrame emptyFrameList frames_ 
                 , padding = plen_
                 , path = pathName_ 
                 , name = seqName 
-                , ext = ext_
+                , ext = BC.concat ext_
                 , frameSep = frameSep_
                 }
      return fs
@@ -227,8 +228,8 @@ instance Arbitrary FileSequence where
            nameIsCoherent x = BC.readInt x == Nothing 
                             && BC.readInt (BC.reverse x) == Nothing
                             && all ((flip BC.notElem) x) ['\n', '\0', '\t']
-           extensionIsCoherent x = all ((flip BC.notElem) x) ['\n', '\0', '\t', '.']
-                                 && (BC.length x) >= 1
+           byteStringAlphaNum = map BC.singleton (['0'..'9']++['A'..'Z']++['a'..'z'])
+
 -- |Split a sequence into a list of sequence having contiguous frames (no holes)
 splitNonContiguous :: FileSequence -> [FileSequence]
 splitNonContiguous fs = map buildSeq $ intervals $ frames fs 
