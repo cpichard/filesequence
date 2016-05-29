@@ -80,17 +80,17 @@ test_extendedPadding = assertEqual a b
 -- list of files A -> FileSequence -> list of files B
 --   ==> B == A 
 -- Also enforce that the list of file is not empty
-prop_transparency :: FileSequence -> Bool
-prop_transparency fs = sort a == sort b
+prop_keepsFileList :: FileSequence -> Bool
+prop_keepsFileList fs = sort a == sort b
   where a = frameList fs
         newfs = head $ fileSequencesFromList a
         b = frameList newfs
 
 -- | Frames restitued by a FileSequence will produce the same FileSequence
---  fs1 --toList--> [frames] --fromList--> fs2
+--  fs1 -- toList --> [frames] -- fromList --> fs2
 --   ==> fs1 == fs2
-prop_bijectiveFunc :: FileSequence -> Bool
-prop_bijectiveFunc fs = fs1 == fs2 --  && fs2 == fs
+prop_convertToFramesIsBijective :: FileSequence -> Bool
+prop_convertToFramesIsBijective fs = fs1 == fs2 --  && fs2 == fs
   where fs1 = head $ fileSequencesFromList (frameList fs)
         fs2 = head $ fileSequencesFromList (frameList fs1)
 
