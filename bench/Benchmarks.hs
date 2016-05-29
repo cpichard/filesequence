@@ -36,7 +36,7 @@ main = do
             , name = "_tes_tfk__dsfjfjozeifjsjdoisodijfodsvizpcdpoczheer"
             , ext = "dpx"
             , frameSep = "."
-            , extSep = "."}
+            }
   defaultMain 
     [
       --bgroup "insert frames" 
