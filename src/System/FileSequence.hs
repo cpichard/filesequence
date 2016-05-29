@@ -205,7 +205,7 @@ instance Arbitrary FileSequence where
      frameSep_ <- elements ["", ".", "_"]
      pathName_ <- oneof [arbitrary, elements [BC.pack "/"]]
      seqName <- arbitrary `suchThat` nameIsCoherent
-     ext_ <- elements (['a' .. 'z'] :: [PathString])
+     ext_ <- arbitrary `suchThat` extensionIsCoherent 
      let fs = FileSequence
                 { frames = foldl insertFrame emptyFrameList frames_ 
                 , padding = plen_
