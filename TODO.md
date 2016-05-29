@@ -1,14 +1,8 @@
-﻿Old skool issue manager
+﻿Issues
 
 TODO now
 ========
-* improve sparseframelist 
-   * Use discrete integer encoding tree => in progress
-   * Add benchmark tests
-   * add benchmarks for the "holes" function which is very slow
 * merge current developments in develop
-* have 2 FrameList implementation FrameList.Diet FrameList.TupleList to have a same code source and be able to play with Diet structure or bench between both
-* add a TODO file so I don't need to be connected to github
 
 Code health
 ===========
@@ -17,10 +11,8 @@ Code health
 * remove all unused functions, remove getRecursivedir function
 * rename frameList to frameNames
 * export library functions only in one file
-* create one module file for padding
 * seqls to handle correctly exceptions
 * change comments, add a space after the bar|
-* split tests in several modules
 * fix all compilation warnings
 * refresh the documentation
 
@@ -34,8 +26,6 @@ Bug fix
 
 Tests
 =====
-* fix the non working tests
-* for the orderDoesNotMatter test, decide that the order matters after all, simple solution is to sort the names 
 * build a list of named sequences with their associated filesequence structures to use in the tests ???? in a separate file ???
 * finish to write arbitraries for file names
 * add test with mixed folder and file having the same name
@@ -56,8 +46,7 @@ Visual improvements
 * add error reporting based on rules. Look at shellcheck, this could be a good code example 
 * python bindings ? :D
 * read sequence of files from a pipe. how does it work ? when do we know this is the end of the stream ?
-* extension separator is always dot, it is useless in the FileSequence struct
-
+* correct discrete integer encoding tree: the tests don't pass
 
 
 
