@@ -90,7 +90,7 @@ getRecursiveDirs topdir = do
 -- in each of them 
 visitFolders :: Bool                    -- Recursive
              -> [PathString]            -- Remaining folders
-             -> ([PathString] -> IO ()) -- Function to apply, take a list of files
+             -> (PathString -> [PathString] -> IO ()) -- Function to apply, takes the current dir and  a list of files
              -> IO ()
 visitFolders _ [] _ = return ()
 visitFolders recurse (x:xs) func = do
@@ -101,7 +101,7 @@ visitFolders recurse (x:xs) func = do
   -- FIXME : the following is a test with a faster function, it is way faster on local disks but
   -- unfortunately on shared volumes, some sequences are skipped, I still don't know why. 
   --let (dirs, files) = splitDirsAndFilesFast x dirTypesAndNames [] []
-  catch (func files) (handleExcept ())
+  catch (func x files) (handleExcept ())
   let d = if recurse
             then dirs++xs
             else xs
@@ -113,6 +113,51 @@ visitFolders recurse (x:xs) func = do
             hPutStr stderr ( pathToConsole x ++ err ++ "\n")
             return a
 
+-- TODO: change function IO [ConsoleString] to IO ()
+--       add more info to the display function
+visitFoldersWithDepth :: Bool    -- Recursive
+             -> [PathString]     -- Remaining folders
+             -> (PathString -> [PathString] -> IO [ConsoleString]) 
+             -> ConsoleString -- prefix
+             -> IO ()
+visitFoldersWithDepth _ [] _ _ = return ()
+visitFoldersWithDepth recurse (x:xs) func prefix = do
+  -- Read directory
+  dirTypesAndNames <- catch (getDirectoryContents x) (handleExcept []) -- Can Throw
+  let dots = [".", ".."] :: [PathString]
+      properNames = filter (`notElem` dots) (map snd dirTypesAndNames)
+  (dirs, files) <- catch (splitDirsAndFiles $ map (x </>)  properNames) (handleExcept ([],[]))
+  -- List of formatted sequence
+  toDisplay <- catch (func x files) (handleExcept [])
+  -- Display directory
+  putStrLn $ prefix ++ (lastElmtPrefix xs) ++ pathToConsole x 
+  -- Display content
+  let newPrefix = if null xs
+                    then prefix ++ "   "
+                    else prefix ++ "|  "
+  displayElement newPrefix (lastElmtPrefix dirs) toDisplay
+  -- Display sub directories
+  if recurse
+    then do 
+        visitFoldersWithDepth recurse dirs func newPrefix
+    else return ()
+  -- Iterate
+  visitFoldersWithDepth recurse xs func prefix
+  where handleExcept a e = do
+            let err | isPermissionError e  = ": permission error"
+                    | isDoesNotExistError e  = ": does not exist"
+                    | otherwise = show (e :: IOException)
+            hPutStr stderr ( pathToConsole x ++ err ++ "\n")
+            return a
+        displayElement _prefix _ [] = return ()
+        displayElement _prefix _seqPx (x:[]) = putStrLn $ _prefix ++ _seqPx ++ x
+        displayElement _prefix _seqPx (x:xs) = do 
+                putStrLn $ _prefix ++ "|- " ++ x
+                displayElement _prefix _seqPx xs
+        lastElmtPrefix d = if null d 
+                             then "`- "
+                             else "|- "
+                                                                       
 -- |Split files and directories in two lists. This function uses the 
 -- standard getStatus function.
 splitDirsAndFiles :: [PathString] -> IO ([PathString], [PathString])

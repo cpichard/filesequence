@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | seqls command.
 -- Search and display sequences found in a given path or from a list of files
 
@@ -102,26 +103,64 @@ processOptions optFunc = addDirectoryList processedOptions
             [] -> opt_ -- by default pathList = "."
             _  -> opt_ { pathList = n_ }
 
+showTree ::  SeqLsOptions 
+         -> (PathString, Int) -- directory and its depth 
+         -> [PathString] -- Files in the directory 
+         -> IO ()
+showTree _ _ [] = return ()
+showTree opts (folder, depth) files = do
+  sequencesInFiles <- fileSequencesFromFiles files -- can throw ?
+  let allSequences = sortSequences (sortOption opts) $ filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
+      allRequired = if contiguous opts
+                      then concatMap splitNonContiguous allSequences
+                      else allSequences
+      spaces = (replicate (depth * 4) ' ') ++ "`-"
+  if null allRequired
+      then return ()
+      else 
+          do 
+            putStrLn $ "|--" ++ spaces ++ pathToConsole folder
+            --mapM_ (putStrLn.sprefix.formatSimple) allRequired 
+            treeDisplay allRequired
+
+  where formatWithStats = formatResultWithStats (outputFormat opts) 
+        formatSimple = formatSimpleResults (outputFormat opts)
+        filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
+        filterExtension [] = id
+        filterExtension exts = filter (\fs -> (ext fs) `elem` exts)
+        sortSequences ByName  = sortBy (\a b -> compare (name a) (name b))
+        sortSequences ByNothing = id
+        treeDisplay [] = return ()
+        treeDisplay (x:[]) = putStrLn $ "`-- " ++ formatSimple x
+        treeDisplay (x:xs) = do 
+                putStrLn $ "`-- " ++ formatSimple x
+                treeDisplay xs
+                
+
 -- |Extract and display sequences from a list of files 
-showSequencesInFiles :: SeqLsOptions -> [PathString] -> IO ()
-showSequencesInFiles _ [] = return () 
-showSequencesInFiles opts files = do
+showSequencesInFiles :: SeqLsOptions -> PathString -> [PathString] -> IO [ConsoleString]
+showSequencesInFiles _ _ [] = return []
+showSequencesInFiles opts folder files = do
   sequencesInFiles <- fileSequencesFromFiles files -- can throw ?
   let allSequences = sortSequences (sortOption opts) $ filterExtension (filterExt opts) $ filterMinFrame $ sequencesInFiles
       allRequired = if contiguous opts
                       then concatMap splitNonContiguous allSequences
                       else allSequences
 
-  if showStats (outputFormat opts)
+  if not (null allRequired)
     then do
-        allRequiredStats <- if (followLink opts)
-                then mapM fileSequenceStatus allRequired        -- can throw
-                else mapM fileSequenceSymlinkStatus allRequired -- can throw
-        let zipped = zip allRequired allRequiredStats
-        mapM_ (putStrLn.formatWithStats) zipped 
-    else
-        mapM_ (putStrLn.formatSimple) allRequired 
+      if showStats (outputFormat opts)
+        then do
+          allRequiredStats <- if (followLink opts)
+                    then mapM fileSequenceStatus allRequired        -- can throw
+                    else mapM fileSequenceSymlinkStatus allRequired -- can throw
+          let zipped = zip allRequired allRequiredStats
+          return $ map formatWithStats zipped 
+        else do
+          return $ map formatSimple allRequired 
     
+    else return []
+
   where formatWithStats = formatResultWithStats (outputFormat opts) 
         formatSimple = formatSimpleResults (outputFormat opts)
         filterMinFrame = filter (\fs -> lastFrame (frames fs) - firstFrame (frames fs) >= minFrames opts - 1)
@@ -130,17 +169,33 @@ showSequencesInFiles opts files = do
         sortSequences ByName  = sortBy (\a b -> compare (name a) (name b))
         sortSequences ByNothing = id
 
+-- showSequenceTree :: SeqLsOptions -> ConsoleString -> [PathString] -> ([PathString], [PathString]) -> IO ()
+-- showSequenceTree _ _ _ (_, []) = return ()
+-- showSequenceTree opt prefix remDirs (subDirs, files) = do
+--   putStrLn $ prefix ++ (lastElmtPrefix (tail remDirs)) ++ pathToConsole (head remDirs) 
+--   -- Display content
+--   let newPrefix = if null xs
+--                     then prefix ++ "   "
+--                     else prefix ++ "|  "
+--   displayElement newPrefix (lastElmtPrefix dirs) toDisplay
+
+
 -- |Finally force the printing of the sequences
 runSeqls :: SeqLsOptions -> IO ()
 runSeqls opts 
   | showVersion opts = showVersionMessage
   | otherwise = do
-    -- partition directories and files from command line
+    -- partition directories and given on the command line
     (folders, files) <- splitDirsAndFiles $ map fromString (pathList opts)
     -- First display the files
-    showSequencesInFiles opts files 
+    toDisplay <- showSequencesInFiles opts "." files 
+    mapM_ putStrLn toDisplay
     -- then display each folder one after the other
-    visitFolders (recursive opts) folders (showSequencesInFiles opts)
+    --visitFolders (recursive opts) folders displa 
+    visitFoldersWithDepth (recursive opts) folders (showSequencesInFiles opts) ""
+
+    where displa x d = do ff <- showSequencesInFiles opts x d 
+                          mapM_ putStrLn ff
 
 -- |Called when an option in the command line is not recognized
 showHelpMessage :: IO ()
