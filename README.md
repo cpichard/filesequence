@@ -4,9 +4,9 @@ FILESEQUENCE
 Description
 ------------
 
-This project contains the command line tools 'seqls', 'seqsum', 'seqcp', which are similar to 'ls', 'cp', 'shasum' except they consider sequence of files as a whole. A sequence of files share a common prefix, a common suffix and a number in between, like a frame number. 
+This project contains the command line tools 'seqls', 'seqsum', 'seqcp', which are similar to 'ls', 'cp', 'shasum' but for sequences of files. 
 
-To illustrate, here is an example of a sequence of file: 
+Here is an example: 
 ```bash
 >>> ls /tmp/sequences
 >>> background.0001.jpg
@@ -14,12 +14,12 @@ To illustrate, here is an example of a sequence of file:
 >>> background.0003.jpg
 >>> background.0004.jpg
 ```
-and the seqls tool:
+with seqls:
 ```bash
 >>> seqls /tmp/sequences
 >>> background.%04d.jpg  1  4
 ```
-Those tools are used a lot in the visual effect and post production industries, where the sequences of files are very common, and generally share the same patterns. Hopefully the tools provided here should be usable in different contexts, let me know if you find them useful. They are available for download and don't require any dependencies.
+Those tools are used a lot in the vfx and post production industries, where the sequences of files are very common. They are available for [download](https://github.com/cpichard/filesequence/releases) and don't require any dependencies.
 
 
 Tools
@@ -54,25 +54,27 @@ Once stack is installed, just retrieve the source code:
 
 and run the following commands in the filesequence directory:
 ```bash
-        cd filesequence
-        stack build
-        stack install --local-bin-path <BINARY_PATH>
+cd filesequence
+stack build
+stack install --local-bin-path BINARY_PATH
 ```
-It will build and install the tools in `<BINARY_PATH>`.
+It will build and install the tools in `BINARY_PATH`.
 
 Examples
 --------
 ### List sequence in a directory with details
+```bash
+seqls -lg /path/to/directory
 
-        seqls -lg /path/to/directory
-
-        -rw-r--r--    93.09K   210.29K     7.95M         1       50  /path/to/directory/checker_board_distotest.%04d.png
-        -rw-r--r--    38.35K   133.74K     4.72M         1       50  /path/to/directory/checker_board_clean.%04d.png
-
-There are 2 sequences in this folder, the minimun size of a frame is 93.09K, the maximum 210.29K, the total size of the first sequence is 7.95M, the first frame is 1, last frame 50.
+-rw-r--r--    93.09K   210.29K     7.95M         1       50  /path/to/directory/checker_board_distotest.%04d.png
+-rw-r--r--    38.35K   133.74K     4.72M         1       50  /path/to/directory/checker_board_clean.%04d.png
+```
+There are 2 sequences in this folder. On the first sequence, the minimum size of a frame is 93.09K, the maximum 210.29K, the total size of the first sequence is 7.95M, the first frame is 1, last frame 50.
 
 See also
 --------
+There are many other project similar to this one,
+
 * python computer graphic kit http://cgkit.sourceforge.net/doc2/filesequencetools.html
 * PySeq http://rsgalloway.github.com/pyseq/ widely used in the vfx industry.
 * Fileseq https://github.com/sqlboy/fileseq
